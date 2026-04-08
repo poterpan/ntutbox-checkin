@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Fragment, useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 
 type AttendanceRecord = {
@@ -195,8 +195,8 @@ export default function SessionViewPage() {
           </thead>
           <tbody>
             {attendance.map((r) => (
-              <>
-                <tr key={r.id} className="border-b last:border-0">
+              <Fragment key={r.id}>
+                <tr className="border-b last:border-0">
                   <td className="px-4 py-3">{r.user_name ?? '-'}</td>
                   <td className="px-4 py-3 text-gray-500">{r.user_email}</td>
                   <td className="px-4 py-3 text-gray-500">
@@ -227,7 +227,7 @@ export default function SessionViewPage() {
                   </td>
                 </tr>
                 {expandedId === r.id && (
-                  <tr key={`${r.id}-detail`} className="bg-gray-50">
+                  <tr className="bg-gray-50">
                     <td colSpan={5} className="px-6 py-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                         <div>
@@ -265,7 +265,7 @@ export default function SessionViewPage() {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>
