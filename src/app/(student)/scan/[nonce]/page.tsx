@@ -73,9 +73,17 @@ export default function ScanPage() {
             <li>IP 位址</li>
             <li>簽到時間</li>
           </ul>
-          <p className="text-gray-500 text-sm mb-6">
+          <p className="text-gray-500 text-sm mb-4">
             以上資料僅供課程出席管理使用，學期結束後可申請刪除。繼續使用即表示您同意上述資料蒐集。
           </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+            <p className="text-amber-800 text-sm font-medium">
+              請使用學校 Google 帳號（@ntut.org.tw）登入
+            </p>
+            <p className="text-amber-600 text-xs mt-1">
+              使用個人 Gmail 將無法完成簽到
+            </p>
+          </div>
           <button onClick={acceptPrivacy}
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
             我了解，開始簽到
@@ -103,6 +111,11 @@ export default function ScanPage() {
         <p className="text-gray-600">
           {state === 'loading' ? '正在記錄簽到時間...' : '正在跳轉 Google 登入...'}
         </p>
+        {state === 'signing_in' && (
+          <p className="text-amber-600 text-sm mt-3 font-medium">
+            請選擇學校帳號（@ntut.org.tw）登入
+          </p>
+        )}
       </div>
     </div>
   );
