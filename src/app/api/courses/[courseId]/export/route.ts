@@ -1,0 +1,50 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireCourseAdmin } from '@/lib/permissions';
+import { getDB } from '@/lib/cloudflare';
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ courseId: string }> },
+) {
+  const { courseId } = await params;
+  await requireCourseAdmin(courseId);
+  const db = getDB();
+
+  const rows = await db
+    .prepare(`
+      SELECT a.user_email, a.user_name, a.scan_time, a.login_time, a.status,
+             a.is_manual, a.manual_reason, a.ip, a.reaction_ms,
+             s.class_date,
+             es.student_id
+      FROM attendance a
+      INNER JOIN sessions s ON a.session_id = s.id
+      LEFT JOIN enrolled_students es
+        ON a.course_id = es.course_id AND a.user_email = es.email
+      WHERE a.course_id = ?
+      ORDER BY s.class_date ASC, a.scan_time ASC
+    `)
+    .bind(courseId)
+    .all();
+
+  const BOM = '\uFEFF';
+  const header = '日期,學號,姓名,Email,掃碼時間,登入時間,狀態,是否手動,備註,IP,反應時間ms';
+  const csvRows = rows.results.map((r: Record<string, unknown>) => {
+    const scanDate = r.scan_time ? new Date(r.scan_time as number).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : '';
+    const loginDate = r.login_time ? new Date(r.login_time as number).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : '';
+    return [
+      r.class_date ?? '', r.student_id ?? '', r.user_name ?? '', r.user_email,
+      scanDate, loginDate, r.status,
+      r.is_manual ? '是' : '否', r.manual_reason ?? '',
+      r.ip ?? '', r.reaction_ms ?? '',
+    ].join(',');
+  });
+
+  const csv = BOM + header + '\n' + csvRows.join('\n');
+
+  return new NextResponse(csv, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="attendance-semester-${courseId}.csv"`,
+    },
+  });
+}

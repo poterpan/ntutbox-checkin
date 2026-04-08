@@ -33,6 +33,9 @@ export default function CourseControlPage() {
     setCreating(false);
   };
 
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+  const hasToday = sessions.some((s) => s.class_date === today);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -47,7 +50,15 @@ export default function CourseControlPage() {
         <a href={`/courses/${courseId}/analytics`} className="text-blue-600 hover:underline">異常分析</a>
         <a href={`/courses/${courseId}/students`} className="text-blue-600 hover:underline">修課名單</a>
         <a href={`/courses/${courseId}/admins`} className="text-blue-600 hover:underline">助教管理</a>
+        <a href={`/api/courses/${courseId}/export`} className="text-blue-600 hover:underline">全學期匯出</a>
       </div>
+
+      {!loading && !hasToday && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-700 font-medium">今天還沒開啟簽到</p>
+          <p className="text-red-500 text-sm mt-1">請點擊「+ 新增本日簽到」開始今日簽到</p>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-gray-500">載入中...</p>

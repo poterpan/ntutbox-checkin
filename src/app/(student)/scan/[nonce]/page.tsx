@@ -11,8 +11,16 @@ export default function ScanPage() {
   const { nonce } = useParams<{ nonce: string }>();
   const [state, setState] = useState<ScanState>('loading');
   const [errorMsg, setErrorMsg] = useState('');
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('privacy_accepted') === '1') {
+      setPrivacyAccepted(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!privacyAccepted) return;
     (async () => {
       try {
         const fp = await getFingerprint();
@@ -46,7 +54,36 @@ export default function ScanPage() {
         setState('error');
       }
     })();
-  }, [nonce]);
+  }, [nonce, privacyAccepted]);
+
+  const acceptPrivacy = () => {
+    localStorage.setItem('privacy_accepted', '1');
+    setPrivacyAccepted(true);
+  };
+
+  if (!privacyAccepted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="max-w-md bg-white rounded-lg shadow-sm border p-6">
+          <h2 className="text-xl font-bold mb-4">隱私聲明</h2>
+          <p className="text-gray-700 mb-3">本系統會蒐集以下資訊用於出席紀錄：</p>
+          <ul className="text-gray-600 text-sm space-y-1 mb-4 list-disc list-inside">
+            <li>Google 帳號（Email、姓名）</li>
+            <li>裝置識別碼（瀏覽器指紋）</li>
+            <li>IP 位址</li>
+            <li>簽到時間</li>
+          </ul>
+          <p className="text-gray-500 text-sm mb-6">
+            以上資料僅供課程出席管理使用，學期結束後可申請刪除。繼續使用即表示您同意上述資料蒐集。
+          </p>
+          <button onClick={acceptPrivacy}
+            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+            我了解，開始簽到
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (state === 'error') {
     return (
