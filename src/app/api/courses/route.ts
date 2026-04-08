@@ -28,5 +28,5 @@ export async function GET() {
       .all();
   }
 
-  return NextResponse.json({ courses: courses.results });
+  return NextResponse.json({ courses: courses.results, is_super: !!superAdmin });
 }

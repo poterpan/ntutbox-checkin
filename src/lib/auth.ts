@@ -10,6 +10,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          hd: process.env.ALLOWED_EMAIL_DOMAIN ?? 'ntut.org.tw',
+        },
+      },
     }),
   ],
   callbacks: {
