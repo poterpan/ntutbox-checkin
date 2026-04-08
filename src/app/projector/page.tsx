@@ -7,16 +7,34 @@ export default function ProjectorLauncher() {
 
   useEffect(() => {
     (async () => {
-      const res = await fetch('/api/projector/redirect', { redirect: 'manual' });
-      if (res.status >= 300 && res.status < 400) {
-        const location = res.headers.get('location');
-        if (location) {
-          window.location.href = location;
+      // Find the latest open session via courses + sessions APIs
+      const coursesRes = await fetch('/api/courses');
+      if (!coursesRes.ok) {
+        window.location.href = '/api/auth/signin?callbackUrl=/projector';
+        return;
+      }
+
+      const { courses } = await coursesRes.json() as { courses?: { id: string }[] };
+      if (!courses?.length) {
+        setStatus('沒有可管理的課程');
+        return;
+      }
+
+      // Check each course for an open session
+      for (const course of courses) {
+        const sessionsRes = await fetch(`/api/courses/${course.id}/sessions/create`);
+        if (!sessionsRes.ok) continue;
+        const { sessions } = await sessionsRes.json() as { sessions?: { id: string; status: string }[] };
+        const openSession = sessions?.find((s) => s.status === 'open');
+        if (openSession) {
+          window.location.href = `/courses/${course.id}/sessions/${openSession.id}/projector`;
           return;
         }
       }
-      // Fallback: fetch and follow normally
-      window.location.href = '/api/projector/redirect';
+
+      // No open session found
+      setStatus('目前沒有進行中的簽到');
+      setTimeout(() => { window.location.href = '/dashboard'; }, 2000);
     })().catch(() => {
       setStatus('載入失敗，請確認網路連線');
     });
