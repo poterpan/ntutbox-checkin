@@ -1,29 +1,67 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Suspense } from 'react';
 
-const STATUS_MAP: Record<string, { icon: string; title: string; desc: string; color: string }> = {
-  on_time: { icon: '✅', title: '簽到成功 — 準時', desc: '已記錄您的出席', color: 'text-green-600' },
-  late: { icon: '⚠️', title: '簽到成功 — 遲到', desc: '已記錄，但判定為遲到', color: 'text-yellow-600' },
-  absent: { icon: '❌', title: '簽到失敗 — 缺席', desc: '已超過簽到截止時間', color: 'text-red-600' },
-  too_early: { icon: '⏰', title: '尚未開放簽到', desc: '請在上課前 30 分鐘內再試', color: 'text-blue-600' },
-  already_signed: { icon: '✅', title: '您已簽到過', desc: '本堂課已有簽到紀錄', color: 'text-green-600' },
+const STATUS_CONFIG: Record<string, {
+  icon: string; title: string; desc: string; next: string;
+  cardClass: string; iconBg: string;
+}> = {
+  on_time: {
+    icon: '✓', title: '簽到成功', desc: '判定結果：準時',
+    next: '可以關閉此頁面了',
+    cardClass: 'result-card-success', iconBg: 'bg-success-500',
+  },
+  late: {
+    icon: '!', title: '簽到成功', desc: '判定結果：遲到',
+    next: '可以關閉此頁面了',
+    cardClass: 'result-card-warning', iconBg: 'bg-warning-500',
+  },
+  absent: {
+    icon: '✕', title: '簽到記錄', desc: '判定結果：缺席（已超過截止時間）',
+    next: '如有疑問請聯繫助教',
+    cardClass: 'result-card-danger', iconBg: 'bg-danger-500',
+  },
+  too_early: {
+    icon: '⏳', title: '尚未開放', desc: '簽到時間還沒到',
+    next: '請在上課前 30 分鐘內重新掃碼',
+    cardClass: 'result-card-info', iconBg: 'bg-info-500',
+  },
+  already_signed: {
+    icon: '✓', title: '已簽到', desc: '本堂課已有您的簽到紀錄',
+    next: '無需重複簽到，可以關閉此頁面',
+    cardClass: 'result-card-muted', iconBg: 'bg-text-muted',
+  },
 };
 
 function ResultContent() {
   const params = useSearchParams();
+  const { data: session } = useSession();
   const status = params.get('status') ?? 'unknown';
-  const info = STATUS_MAP[status] ?? {
-    icon: '❓', title: '未知狀態', desc: '請聯繫助教', color: 'text-gray-600',
+  const config = STATUS_CONFIG[status] ?? {
+    icon: '?', title: '未知狀態', desc: '發生未預期的錯誤',
+    next: '請聯繫助教', cardClass: 'result-card-muted', iconBg: 'bg-text-muted',
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="text-center max-w-sm">
-        <p className="text-5xl mb-4">{info.icon}</p>
-        <h1 className={`text-xl font-bold mb-2 ${info.color}`}>{info.title}</h1>
-        <p className="text-gray-500">{info.desc}</p>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-surface-dim">
+      <div className={`result-card ${config.cardClass} mx-auto`}>
+        <div className={`w-14 h-14 rounded-full ${config.iconBg} text-white flex items-center justify-center text-2xl font-bold mx-auto mb-4`}>
+          {config.icon}
+        </div>
+        <h1 className="text-xl font-bold mb-1">{config.title}</h1>
+        <p className="text-text-secondary text-sm mb-4">{config.desc}</p>
+
+        {session?.user?.name && (
+          <div className="bg-white/60 rounded-lg px-3 py-2 mb-4 inline-block">
+            <p className="text-xs text-text-muted">登入帳號</p>
+            <p className="text-sm font-medium text-text-primary">{session.user.name}</p>
+            <p className="text-xs text-text-muted">{session.user.email}</p>
+          </div>
+        )}
+
+        <p className="text-text-muted text-xs">{config.next}</p>
       </div>
     </div>
   );
@@ -31,7 +69,11 @@ function ResultContent() {
 
 export default function ResultPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">載入中...</div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-surface-dim">
+        <p className="text-text-muted">載入中...</p>
+      </div>
+    }>
       <ResultContent />
     </Suspense>
   );

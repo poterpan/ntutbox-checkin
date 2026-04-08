@@ -5,22 +5,21 @@ import { signIn } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import { getFingerprint } from '@/lib/fingerprint';
 
-type ScanState = 'loading' | 'signing_in' | 'error';
+type ScanState = 'privacy' | 'scanning' | 'redirecting' | 'error';
 
 export default function ScanPage() {
   const { nonce } = useParams<{ nonce: string }>();
-  const [state, setState] = useState<ScanState>('loading');
+  const [state, setState] = useState<ScanState>('privacy');
   const [errorMsg, setErrorMsg] = useState('');
-  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('privacy_accepted') === '1') {
-      setPrivacyAccepted(true);
+      setState('scanning');
     }
   }, []);
 
   useEffect(() => {
-    if (!privacyAccepted) return;
+    if (state !== 'scanning') return;
     (async () => {
       try {
         const fp = await getFingerprint();
@@ -44,48 +43,47 @@ export default function ScanPage() {
         }
 
         const { pending_id } = await res.json() as { pending_id: string };
-        setState('signing_in');
+        setState('redirecting');
 
-        signIn('google', {
-          callbackUrl: `/api/checkin?pid=${pending_id}`,
-        });
+        // Small delay so user sees the step change
+        setTimeout(() => {
+          signIn('google', { callbackUrl: `/api/checkin?pid=${pending_id}` });
+        }, 600);
       } catch {
         setErrorMsg('網路錯誤，請確認網路連線後重試');
         setState('error');
       }
     })();
-  }, [nonce, privacyAccepted]);
+  }, [nonce, state]);
 
   const acceptPrivacy = () => {
     localStorage.setItem('privacy_accepted', '1');
-    setPrivacyAccepted(true);
+    setState('scanning');
   };
 
-  if (!privacyAccepted) {
+  // Privacy screen
+  if (state === 'privacy') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="max-w-md bg-white rounded-lg shadow-sm border p-6">
-          <h2 className="text-xl font-bold mb-4">隱私聲明</h2>
-          <p className="text-gray-700 mb-3">本系統會蒐集以下資訊用於出席紀錄：</p>
-          <ul className="text-gray-600 text-sm space-y-1 mb-4 list-disc list-inside">
-            <li>Google 帳號（Email、姓名）</li>
-            <li>裝置識別碼（瀏覽器指紋）</li>
-            <li>IP 位址</li>
-            <li>簽到時間</li>
-          </ul>
-          <p className="text-gray-500 text-sm mb-4">
-            以上資料僅供課程出席管理使用，學期結束後可申請刪除。繼續使用即表示您同意上述資料蒐集。
-          </p>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
-            <p className="text-amber-800 text-sm font-medium">
-              請使用學校 Google 帳號（@ntut.org.tw）登入
-            </p>
-            <p className="text-amber-600 text-xs mt-1">
-              使用個人 Gmail 將無法完成簽到
-            </p>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-surface-dim">
+        <div className="card p-6 max-w-sm w-full">
+          <h2 className="text-lg font-bold mb-3">簽到前須知</h2>
+          <p className="text-text-secondary text-sm mb-3">本系統將記錄以下資訊用於出席管理：</p>
+          <div className="flex flex-col gap-2 mb-4">
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-500 flex items-center justify-center text-xs flex-shrink-0">1</span>
+              學校 Google 帳號
+            </div>
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-500 flex items-center justify-center text-xs flex-shrink-0">2</span>
+              裝置識別碼與 IP
+            </div>
+            <div className="flex items-center gap-2 text-sm text-text-secondary">
+              <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-500 flex items-center justify-center text-xs flex-shrink-0">3</span>
+              簽到時間
+            </div>
           </div>
-          <button onClick={acceptPrivacy}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+          <p className="text-text-muted text-xs mb-5">僅供課程出席管理，學期結束後可申請刪除。</p>
+          <button onClick={acceptPrivacy} className="btn btn-primary w-full">
             我了解，開始簽到
           </button>
         </div>
@@ -93,29 +91,66 @@ export default function ScanPage() {
     );
   }
 
+  // Error screen
   if (state === 'error') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-sm">
-          <p className="text-red-600 text-lg font-medium mb-4">{errorMsg}</p>
-          <p className="text-gray-500 text-sm">請重新掃描教室投影幕上的 QR Code</p>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-surface-dim">
+        <div className="result-card result-card-danger mx-auto">
+          <p className="text-4xl mb-3">✕</p>
+          <h1 className="text-lg font-bold text-danger-600 mb-2">簽到失敗</h1>
+          <p className="text-text-secondary text-sm mb-6">{errorMsg}</p>
+          <p className="text-text-muted text-xs">請重新掃描投影幕上的 QR Code</p>
         </div>
       </div>
     );
   }
 
+  // Progress screen (scanning / redirecting)
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4" />
-        <p className="text-gray-600">
-          {state === 'loading' ? '正在記錄簽到時間...' : '正在跳轉 Google 登入...'}
-        </p>
-        {state === 'signing_in' && (
-          <p className="text-amber-600 text-sm mt-3 font-medium">
-            請選擇學校帳號（@ntut.org.tw）登入
-          </p>
-        )}
+    <div className="min-h-screen flex items-center justify-center p-4 bg-surface-dim">
+      <div className="card p-6 max-w-sm w-full">
+        <div className="flex flex-col gap-4">
+          {/* Step 1 */}
+          <div className="flex items-center gap-3">
+            <span className="w-8 h-8 rounded-full bg-success-100 text-success-600 flex items-center justify-center text-sm font-bold flex-shrink-0">✓</span>
+            <div>
+              <p className="font-medium text-text-primary">掃碼成功</p>
+              <p className="text-xs text-text-muted">QR Code 已驗證</p>
+            </div>
+          </div>
+          {/* Step 2 */}
+          <div className="flex items-center gap-3">
+            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+              state === 'scanning'
+                ? 'bg-brand-100 text-brand-500 animate-pulse'
+                : 'bg-success-100 text-success-600'
+            }`}>
+              {state === 'scanning' ? '2' : '✓'}
+            </span>
+            <div>
+              <p className={`font-medium ${state === 'scanning' ? 'text-text-primary' : 'text-text-primary'}`}>
+                {state === 'scanning' ? '正在記錄簽到時間...' : '時間已記錄'}
+              </p>
+              <p className="text-xs text-text-muted">以此刻時間作為簽到依據</p>
+            </div>
+          </div>
+          {/* Step 3 */}
+          <div className="flex items-center gap-3">
+            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+              state === 'redirecting'
+                ? 'bg-brand-100 text-brand-500 animate-pulse'
+                : 'bg-surface-muted text-text-muted'
+            }`}>3</span>
+            <div>
+              <p className={`font-medium ${state === 'redirecting' ? 'text-text-primary' : 'text-text-muted'}`}>
+                跳轉 Google 登入
+              </p>
+              {state === 'redirecting' && (
+                <p className="text-xs text-warning-500 font-medium">請選擇學校帳號 (@ntut.org.tw)</p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
