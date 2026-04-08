@@ -1,10 +1,30 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
 
 export const metadata: Metadata = {
 	title: "NTUT 簽到系統",
 	description: "北科大課程線上簽到系統",
+	manifest: "/manifest.json",
+	appleWebApp: {
+		capable: true,
+		statusBarStyle: "default",
+		title: "NTUT 簽到",
+	},
+	icons: {
+		icon: [
+			{ url: "/icons/icon-32x32.png", sizes: "32x32", type: "image/png" },
+			{ url: "/icons/icon-16x16.png", sizes: "16x16", type: "image/png" },
+		],
+		apple: "/apple-touch-icon.png",
+	},
+};
+
+export const viewport: Viewport = {
+	themeColor: "#1e40af",
+	width: "device-width",
+	initialScale: 1,
+	maximumScale: 1,
 };
 
 export default function RootLayout({
