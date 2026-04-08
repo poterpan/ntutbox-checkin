@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import ConfirmDialog from '@/components/confirm-dialog';
 
 type AttendanceRecord = {
   id: number; user_email: string; user_name: string | null;
@@ -27,6 +28,7 @@ export default function SessionViewPage() {
   const [editingStatus, setEditingStatus] = useState<Record<number, boolean>>({});
   const [courseName, setCourseName] = useState<string>('');
   const [classDate, setClassDate] = useState<string>('');
+  const [dialog, setDialog] = useState<{ title: string; message: string; danger?: boolean; onConfirm: () => void } | null>(null);
 
   const fetchList = useCallback(async () => {
     const res = await fetch(`/api/courses/${courseId}/sessions/${id}/list`);
@@ -68,12 +70,31 @@ export default function SessionViewPage() {
     return () => clearInterval(timer);
   }, [fetchList, courseId, id]);
 
-  const handleCloseSession = async () => {
-    if (!confirm('確定要結束此簽到？結束後學生將無法再掃碼簽到。')) return;
-    const res = await fetch(`/api/courses/${courseId}/sessions/${id}/close`, { method: 'POST' });
-    if (res.ok) {
-      setSessionStatus('closed');
-    }
+  const handleCloseSession = () => {
+    setDialog({
+      title: '結束簽到',
+      message: '確定要結束此簽到？結束後學生將無法再掃碼簽到。',
+      danger: true,
+      onConfirm: async () => {
+        const res = await fetch(`/api/courses/${courseId}/sessions/${id}/close`, { method: 'POST' });
+        if (res.ok) {
+          setSessionStatus('closed');
+        }
+      },
+    });
+  };
+
+  const handleReopenSession = () => {
+    setDialog({
+      title: '重新開啟簽到',
+      message: '確定要重新開啟此簽到？開啟後學生將可以再次掃碼簽到。',
+      onConfirm: async () => {
+        const res = await fetch(`/api/courses/${courseId}/sessions/${id}/reopen`, { method: 'POST' });
+        if (res.ok) {
+          setSessionStatus('open');
+        }
+      },
+    });
   };
 
   const handleToggleQrMode = async () => {
@@ -121,25 +142,30 @@ export default function SessionViewPage() {
     }
   };
 
-  const handleStatusChange = async (recordId: number, newStatus: string) => {
+  const handleStatusChange = (recordId: number, newStatus: string) => {
     const labels: Record<string, string> = { on_time: '準時', late: '遲到', absent: '缺席', manual: '補簽' };
-    if (!confirm(`確定要將此紀錄改為「${labels[newStatus] ?? newStatus}」？`)) return;
-    setEditingStatus((prev) => ({ ...prev, [recordId]: true }));
-    try {
-      const res = await fetch(`/api/courses/${courseId}/attendance/${recordId}/edit`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (res.ok) {
-        await fetchList();
-      } else {
-        const data = await res.json() as { error?: string };
-        alert('修改失敗：' + (data.error ?? '未知錯誤'));
-      }
-    } finally {
-      setEditingStatus((prev) => ({ ...prev, [recordId]: false }));
-    }
+    setDialog({
+      title: '修改簽到狀態',
+      message: `確定要將此紀錄改為「${labels[newStatus] ?? newStatus}」？`,
+      onConfirm: async () => {
+        setEditingStatus((prev) => ({ ...prev, [recordId]: true }));
+        try {
+          const res = await fetch(`/api/courses/${courseId}/attendance/${recordId}/edit`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus }),
+          });
+          if (res.ok) {
+            await fetchList();
+          } else {
+            const data = await res.json() as { error?: string };
+            alert('修改失敗：' + (data.error ?? '未知錯誤'));
+          }
+        } finally {
+          setEditingStatus((prev) => ({ ...prev, [recordId]: false }));
+        }
+      },
+    });
   };
 
   const statusLabel = (s: string) => {
@@ -225,12 +251,17 @@ export default function SessionViewPage() {
           {qrMode === 'dynamic' ? '切換靜態 QR' : '切換動態 QR'}
         </button>
 
-        {/* Danger action — right aligned */}
-        <div className="ml-auto">
-          <button onClick={handleCloseSession} disabled={isClosed}
-            className={isClosed ? 'btn btn-ghost btn-sm cursor-not-allowed' : 'btn btn-danger btn-sm'}>
-            {isClosed ? '已結束' : '結束簽到'}
-          </button>
+        {/* Danger / reopen action — right aligned */}
+        <div className="ml-auto flex items-center gap-2">
+          {isClosed ? (
+            <button onClick={handleReopenSession} className="btn btn-primary btn-sm">
+              重新開啟
+            </button>
+          ) : (
+            <button onClick={handleCloseSession} className="btn btn-danger btn-sm">
+              結束簽到
+            </button>
+          )}
         </div>
       </div>
 
@@ -360,6 +391,15 @@ export default function SessionViewPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!dialog}
+        title={dialog?.title ?? ''}
+        message={dialog?.message ?? ''}
+        danger={dialog?.danger}
+        onConfirm={() => { dialog?.onConfirm(); setDialog(null); }}
+        onCancel={() => setDialog(null)}
+      />
 
       {/* Manual Check-in Modal */}
       {showManualModal && (

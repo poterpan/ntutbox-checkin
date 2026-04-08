@@ -22,10 +22,15 @@ export default function ProjectorPage() {
   const [courseName, setCourseName] = useState('');
   const [classDate, setClassDate] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [closed, setClosed] = useState(false);
 
   const fetchQR = useCallback(async () => {
     const res = await fetch(`/api/courses/${courseId}/sessions/${id}/qr`);
-    if (!res.ok) return;
+    if (!res.ok) {
+      setClosed(true);
+      return;
+    }
+    setClosed(false);
     const data = await res.json() as QrData;
     const url = `${window.location.origin}/scan/${data.nonce}`;
     const dataUrl = await QRCode.toDataURL(url, {
@@ -127,6 +132,19 @@ export default function ProjectorPage() {
     doc.close();
     printWindow.print();
   };
+
+  if (closed) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8">
+        <h1 className="text-3xl sm:text-5xl font-bold text-text-primary mb-4 text-center">{courseName || '課堂簽到'}</h1>
+        {classDate && <p className="text-text-muted text-lg mb-8">{classDate}</p>}
+        <div className="card p-8 text-center">
+          <p className="text-5xl mb-4">⏹</p>
+          <p className="text-xl font-bold text-text-secondary">本次簽到已結束</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 sm:p-8 relative">

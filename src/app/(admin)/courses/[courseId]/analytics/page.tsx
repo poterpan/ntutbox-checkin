@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import ConfirmDialog from '@/components/confirm-dialog';
 
 type FpCross = { fingerprint_hash: string; account_count: number; accounts: string; total_signs: number };
 type IpBurst = { session_id: string; ip: string; cnt: number; users: string };
@@ -24,6 +25,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
   const [courseName, setCourseName] = useState<string>('');
+  const [dialog, setDialog] = useState<{ title: string; message: string; danger?: boolean; onConfirm: () => void } | null>(null);
 
   const fetchData = useCallback(() => {
     fetch(`/api/courses/${courseId}/analytics`)
@@ -54,12 +56,18 @@ export default function AnalyticsPage() {
     fetchData();
   };
 
-  const deleteRecord = async (id: string) => {
-    if (!confirm('確定要刪除此紀錄？此操作不可復原。')) return;
-    setActing(id);
-    await fetch(`/api/courses/${courseId}/attendance/${id}`, { method: 'DELETE' });
-    setActing(null);
-    fetchData();
+  const deleteRecord = (id: string) => {
+    setDialog({
+      title: '刪除紀錄',
+      message: '確定要刪除此紀錄？此操作不可復原。',
+      danger: true,
+      onConfirm: async () => {
+        setActing(id);
+        await fetch(`/api/courses/${courseId}/attendance/${id}`, { method: 'DELETE' });
+        setActing(null);
+        fetchData();
+      },
+    });
   };
 
   if (loading) {
@@ -244,6 +252,15 @@ export default function AnalyticsPage() {
           </table>
         )}
       </details>
+
+      <ConfirmDialog
+        open={!!dialog}
+        title={dialog?.title ?? ''}
+        message={dialog?.message ?? ''}
+        danger={dialog?.danger}
+        onConfirm={() => { dialog?.onConfirm(); setDialog(null); }}
+        onCancel={() => setDialog(null)}
+      />
     </div>
   );
 }

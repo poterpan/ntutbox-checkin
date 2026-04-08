@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import ConfirmDialog from '@/components/confirm-dialog';
 
 type Admin = {
   email: string;
@@ -19,6 +20,7 @@ export default function AdminsPage() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('ta');
   const [submitting, setSubmitting] = useState(false);
+  const [dialog, setDialog] = useState<{ title: string; message: string; danger?: boolean; onConfirm: () => void } | null>(null);
 
   const fetchAdmins = useCallback(() => {
     fetch(`/api/courses/${courseId}/admins`)
@@ -58,23 +60,29 @@ export default function AdminsPage() {
     setSubmitting(false);
   };
 
-  const removeAdmin = async (adminEmail: string) => {
-    if (!confirm(`確定要移除 ${adminEmail}？`)) return;
-    const res = await fetch(`/api/courses/${courseId}/admins`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: adminEmail }),
+  const removeAdmin = (adminEmail: string) => {
+    setDialog({
+      title: '移除管理員',
+      message: `確定要移除 ${adminEmail}？`,
+      danger: true,
+      onConfirm: async () => {
+        const res = await fetch(`/api/courses/${courseId}/admins`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: adminEmail }),
+        });
+        if (res.ok) {
+          fetchAdmins();
+        } else {
+          const err = (await res.json()) as { error?: string };
+          if (err.error === 'forbidden') {
+            alert('權限不足，僅授課教師可移除管理員');
+          } else {
+            alert('移除失敗');
+          }
+        }
+      },
     });
-    if (res.ok) {
-      fetchAdmins();
-    } else {
-      const err = (await res.json()) as { error?: string };
-      if (err.error === 'forbidden') {
-        alert('權限不足，僅授課教師可移除管理員');
-      } else {
-        alert('移除失敗');
-      }
-    }
   };
 
   if (loading) return <p className="text-gray-500">載入中...</p>;
@@ -153,6 +161,15 @@ export default function AdminsPage() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!dialog}
+        title={dialog?.title ?? ''}
+        message={dialog?.message ?? ''}
+        danger={dialog?.danger}
+        onConfirm={() => { dialog?.onConfirm(); setDialog(null); }}
+        onCancel={() => setDialog(null)}
+      />
     </div>
   );
 }

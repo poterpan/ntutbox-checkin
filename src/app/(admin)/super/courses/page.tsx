@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import ConfirmDialog from '@/components/confirm-dialog';
 
 type Course = { id: string; name: string; semester: string; status: string };
 
@@ -12,6 +13,7 @@ export default function SuperCoursesPage() {
   });
   const [message, setMessage] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{ title: string; message: string; danger?: boolean; onConfirm: () => void } | null>(null);
 
   const fetchCourses = () => {
     fetch('/api/courses')
@@ -38,22 +40,26 @@ export default function SuperCoursesPage() {
     }
   };
 
-  const handleDelete = async (courseId: string, courseName: string) => {
-    if (!confirm(`確定要刪除課程「${courseName}」？\n\n此操作將永久刪除該課程的所有簽到紀錄、場次、助教與學生名單，且無法復原。`)) return;
-    if (!confirm(`再次確認：刪除「${courseName}」及其所有資料？`)) return;
-
-    setDeleting(courseId);
-    const res = await fetch('/api/super/courses', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: courseId }),
+  const handleDelete = (courseId: string, courseName: string) => {
+    setDialog({
+      title: '刪除課程',
+      message: `確定要刪除課程「${courseName}」？\n\n此操作將永久刪除該課程的所有簽到紀錄、場次、助教與學生名單，且無法復原。`,
+      danger: true,
+      onConfirm: async () => {
+        setDeleting(courseId);
+        const res = await fetch('/api/super/courses', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: courseId }),
+        });
+        setDeleting(null);
+        if (res.ok) {
+          fetchCourses();
+        } else {
+          alert('刪除失敗');
+        }
+      },
     });
-    setDeleting(null);
-    if (res.ok) {
-      fetchCourses();
-    } else {
-      alert('刪除失敗');
-    }
   };
 
   return (
@@ -124,6 +130,15 @@ export default function SuperCoursesPage() {
         <button type="submit" className="btn btn-primary">建立課程</button>
         {message && <p className="mt-3 text-sm text-text-secondary">{message}</p>}
       </form>
+
+      <ConfirmDialog
+        open={!!dialog}
+        title={dialog?.title ?? ''}
+        message={dialog?.message ?? ''}
+        danger={dialog?.danger}
+        onConfirm={() => { dialog?.onConfirm(); setDialog(null); }}
+        onCancel={() => setDialog(null)}
+      />
     </div>
   );
 }
