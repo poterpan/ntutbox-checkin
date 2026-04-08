@@ -23,7 +23,8 @@ export async function GET(req: NextRequest) {
 
   const pending_id = new URL(req.url).searchParams.get('pid');
   if (!pending_id) {
-    return NextResponse.redirect(new URL('/error?code=missing_pid', req.url));
+    // No pid — likely came from a normal login, not a scan flow. Send to dashboard.
+    return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
   const kv = getKV();
