@@ -5,9 +5,9 @@ import { useParams } from 'next/navigation';
 import ConfirmDialog from '@/components/confirm-dialog';
 
 type FpCross = { fingerprint_hash: string; account_count: number; accounts: string; total_signs: number };
-type IpBurst = { session_id: string; ip: string; cnt: number; users: string };
-type FastReaction = { id: string; user_email: string; session_id: string; scan_time: number; reaction_ms: number };
-type FpDetail = { id: string; user_email: string; session_id: string; fingerprint_hash: string; fingerprint_raw: string | null; scan_time: number };
+type IpBurst = { session_id: string; class_date: string; ip: string; cnt: number; users: string };
+type FastReaction = { id: string; user_email: string; session_id: string; class_date: string; scan_time: number; reaction_ms: number };
+type FpDetail = { id: string; user_email: string; session_id: string; class_date: string; fingerprint_hash: string; fingerprint_raw: string | null; scan_time: number };
 
 type AnalyticsData = {
   fp_cross_account?: FpCross[];
@@ -145,7 +145,7 @@ export default function AnalyticsPage() {
           <table className="w-full text-sm">
             <thead className="bg-surface-muted border-t border-border"><tr>
               <th className="text-left px-4 py-2 font-medium text-text-secondary">Email</th>
-              <th className="text-left px-4 py-2 font-medium text-text-secondary">場次</th>
+              <th className="text-left px-4 py-2 font-medium text-text-secondary">日期</th>
               <th className="text-left px-4 py-2 font-medium text-text-secondary">指紋 Hash</th>
               <th className="text-left px-4 py-2 font-medium text-text-secondary">操作</th>
             </tr></thead>
@@ -153,7 +153,7 @@ export default function AnalyticsPage() {
               {fpDetails.map((r) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="px-4 py-2 text-text-primary">{r.user_email}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-text-muted">{r.session_id.slice(0, 8)}...</td>
+                  <td className="px-4 py-2 font-mono text-xs text-text-muted">{r.class_date}</td>
                   <td className="px-4 py-2">
                     <span className="font-mono text-xs text-text-muted">{r.fingerprint_hash?.slice(0, 12)}...</span>
                     {r.fingerprint_raw && (
@@ -194,7 +194,7 @@ export default function AnalyticsPage() {
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-surface-muted border-t border-border"><tr>
-              <th className="text-left px-4 py-2 font-medium text-text-secondary">場次</th>
+              <th className="text-left px-4 py-2 font-medium text-text-secondary">日期</th>
               <th className="text-left px-4 py-2 font-medium text-text-secondary">IP</th>
               <th className="text-left px-4 py-2 font-medium text-text-secondary">人數</th>
               <th className="text-left px-4 py-2 font-medium text-text-secondary">帳號</th>
@@ -202,7 +202,7 @@ export default function AnalyticsPage() {
             <tbody>
               {ipBurst.map((r, i) => (
                 <tr key={i} className="border-t border-border">
-                  <td className="px-4 py-2 font-mono text-xs text-text-muted">{r.session_id.slice(0, 8)}...</td>
+                  <td className="px-4 py-2 font-mono text-xs text-text-muted">{r.class_date}</td>
                   <td className="px-4 py-2 text-text-primary">{r.ip}</td>
                   <td className="px-4 py-2 text-text-primary">{r.cnt}</td>
                   <td className="px-4 py-2 text-xs text-text-secondary">{r.users}</td>
@@ -224,7 +224,7 @@ export default function AnalyticsPage() {
           <table className="w-full text-sm">
             <thead className="bg-surface-muted border-t border-border"><tr>
               <th className="text-left px-4 py-2 font-medium text-text-secondary">Email</th>
-              <th className="text-left px-4 py-2 font-medium text-text-secondary">場次</th>
+              <th className="text-left px-4 py-2 font-medium text-text-secondary">日期</th>
               <th className="text-left px-4 py-2 font-medium text-text-secondary">反應時間</th>
               <th className="text-left px-4 py-2 font-medium text-text-secondary">操作</th>
             </tr></thead>
@@ -232,7 +232,7 @@ export default function AnalyticsPage() {
               {fastReaction.map((r) => (
                 <tr key={r.id} className="border-t border-border">
                   <td className="px-4 py-2 text-text-primary">{r.user_email}</td>
-                  <td className="px-4 py-2 font-mono text-xs text-text-muted">{r.session_id.slice(0, 8)}...</td>
+                  <td className="px-4 py-2 font-mono text-xs text-text-muted">{r.class_date}</td>
                   <td className="px-4 py-2 text-text-primary">{(r.reaction_ms / 1000).toFixed(1)}s</td>
                   <td className="px-4 py-2 space-x-2">
                     <button

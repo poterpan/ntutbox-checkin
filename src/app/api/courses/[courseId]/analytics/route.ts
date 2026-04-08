@@ -28,14 +28,15 @@ export async function GET(
 
   const ipBurst = await db
     .prepare(`
-      SELECT session_id, ip,
-             COUNT(DISTINCT user_email) as cnt,
-             GROUP_CONCAT(DISTINCT user_email) as users,
-             MIN(scan_time) as first_scan,
-             MAX(scan_time) as last_scan
-      FROM attendance
-      WHERE course_id = ?
-      GROUP BY session_id, ip
+      SELECT a.session_id, s.class_date, a.ip,
+             COUNT(DISTINCT a.user_email) as cnt,
+             GROUP_CONCAT(DISTINCT a.user_email) as users,
+             MIN(a.scan_time) as first_scan,
+             MAX(a.scan_time) as last_scan
+      FROM attendance a
+      INNER JOIN sessions s ON a.session_id = s.id
+      WHERE a.course_id = ?
+      GROUP BY a.session_id, a.ip
       HAVING cnt >= 3
       ORDER BY cnt DESC
     `)
@@ -44,25 +45,27 @@ export async function GET(
 
   const fastReaction = await db
     .prepare(`
-      SELECT id, user_email, session_id, scan_time, reaction_ms
-      FROM attendance
-      WHERE course_id = ? AND reaction_ms IS NOT NULL AND reaction_ms < 5000
-      ORDER BY reaction_ms ASC
+      SELECT a.id, a.user_email, a.session_id, s.class_date, a.scan_time, a.reaction_ms
+      FROM attendance a
+      INNER JOIN sessions s ON a.session_id = s.id
+      WHERE a.course_id = ? AND a.reaction_ms IS NOT NULL AND a.reaction_ms < 5000
+      ORDER BY a.reaction_ms ASC
     `)
     .bind(courseId)
     .all();
 
   const fpDetails = await db
     .prepare(`
-      SELECT id, user_email, session_id, fingerprint_hash, fingerprint_raw, scan_time
-      FROM attendance
-      WHERE course_id = ? AND fingerprint_hash IN (
+      SELECT a.id, a.user_email, a.session_id, s.class_date, a.fingerprint_hash, a.fingerprint_raw, a.scan_time
+      FROM attendance a
+      INNER JOIN sessions s ON a.session_id = s.id
+      WHERE a.course_id = ? AND a.fingerprint_hash IN (
         SELECT fingerprint_hash FROM attendance
         WHERE course_id = ? AND fingerprint_hash IS NOT NULL
         GROUP BY fingerprint_hash
         HAVING COUNT(DISTINCT user_email) > 1
       )
-      ORDER BY fingerprint_hash, scan_time
+      ORDER BY a.fingerprint_hash, a.scan_time
     `)
     .bind(courseId, courseId)
     .all();
