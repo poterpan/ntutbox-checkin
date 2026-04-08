@@ -42,14 +42,19 @@ export default function CourseControlPage() {
       ]);
     } else {
       const err = await res.json() as { error?: string };
-      alert(err.error === 'session_already_exists' ? '今日已有簽到場次' : '建立失敗');
+      if (err.error === 'session_already_exists' && todaySession) {
+        // Navigate to existing today session
+        window.location.href = `/courses/${courseId}/sessions/${todaySession.id}`;
+      } else {
+        alert(err.error === 'session_already_exists' ? '今日已有簽到場次' : '建立失敗');
+      }
     }
     setCreating(false);
   };
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-  const todayOpenSession = sessions.find((s) => s.class_date === today && s.status === 'open');
-  const pastSessions = sessions.filter((s) => s !== todayOpenSession);
+  const todaySession = sessions.find((s) => s.class_date === today);
+  const pastSessions = sessions.filter((s) => s !== todaySession);
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><div className="animate-pulse text-text-muted">載入中...</div></div>;
@@ -90,16 +95,28 @@ export default function CourseControlPage() {
         </div>
 
         {/* Today status */}
-        {todayOpenSession ? (
-          <div className="flex items-center justify-between bg-success-50 rounded-lg px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className="badge badge-success">進行中</span>
-              <span className="text-sm text-text-primary font-medium">今日簽到 ({todayOpenSession.class_date})</span>
+        {todaySession ? (
+          todaySession.status === 'open' ? (
+            <div className="flex items-center justify-between bg-success-50 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="badge badge-success">進行中</span>
+                <span className="text-sm text-text-primary font-medium">今日簽到 ({todaySession.class_date})</span>
+              </div>
+              <a href={`/courses/${courseId}/sessions/${todaySession.id}`} className="btn btn-primary btn-sm">
+                進入控制台
+              </a>
             </div>
-            <a href={`/courses/${courseId}/sessions/${todayOpenSession.id}`} className="btn btn-primary btn-sm">
-              進入控制台
-            </a>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between bg-surface-muted rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="badge badge-muted">已結束</span>
+                <span className="text-sm text-text-primary font-medium">今日簽到已結束 ({todaySession.class_date})</span>
+              </div>
+              <a href={`/courses/${courseId}/sessions/${todaySession.id}`} className="btn btn-secondary btn-sm">
+                查看紀錄
+              </a>
+            </div>
+          )
         ) : (
           <div className="flex items-center justify-between bg-warning-50 rounded-lg px-4 py-3">
             <div className="flex items-center gap-3">

@@ -37,7 +37,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-text-primary">我的課程</h1>
         {isSuper && (
-          <a href="/super/courses" className="btn btn-primary btn-sm">+ 新增課程</a>
+          <a href="/super/courses" className="btn btn-secondary btn-sm">課程管理</a>
         )}
       </div>
 
