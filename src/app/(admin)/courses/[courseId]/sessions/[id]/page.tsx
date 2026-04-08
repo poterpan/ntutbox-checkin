@@ -122,6 +122,8 @@ export default function SessionViewPage() {
   };
 
   const handleStatusChange = async (recordId: number, newStatus: string) => {
+    const labels: Record<string, string> = { on_time: '準時', late: '遲到', absent: '缺席', manual: '補簽' };
+    if (!confirm(`確定要將此紀錄改為「${labels[newStatus] ?? newStatus}」？`)) return;
     setEditingStatus((prev) => ({ ...prev, [recordId]: true }));
     try {
       const res = await fetch(`/api/courses/${courseId}/attendance/${recordId}/edit`, {

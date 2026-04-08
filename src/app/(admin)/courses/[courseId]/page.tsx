@@ -48,8 +48,8 @@ export default function CourseControlPage() {
   };
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
-  const todaySession = sessions.find((s) => s.class_date === today);
-  const historySessions = sessions.filter((s) => s.class_date !== today);
+  const todayOpenSession = sessions.find((s) => s.class_date === today && s.status === 'open');
+  const pastSessions = sessions.filter((s) => s !== todayOpenSession);
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><div className="animate-pulse text-text-muted">載入中...</div></div>;
@@ -90,13 +90,13 @@ export default function CourseControlPage() {
         </div>
 
         {/* Today status */}
-        {todaySession ? (
+        {todayOpenSession ? (
           <div className="flex items-center justify-between bg-success-50 rounded-lg px-4 py-3">
             <div className="flex items-center gap-3">
-              <span className="badge badge-success">{todaySession.status === 'open' ? '進行中' : '已結束'}</span>
-              <span className="text-sm text-text-primary font-medium">今日簽到 ({todaySession.class_date})</span>
+              <span className="badge badge-success">進行中</span>
+              <span className="text-sm text-text-primary font-medium">今日簽到 ({todayOpenSession.class_date})</span>
             </div>
-            <a href={`/courses/${courseId}/sessions/${todaySession.id}`} className="btn btn-primary btn-sm">
+            <a href={`/courses/${courseId}/sessions/${todayOpenSession.id}`} className="btn btn-primary btn-sm">
               進入控制台
             </a>
           </div>
@@ -133,17 +133,20 @@ export default function CourseControlPage() {
         </a>
       </div>
 
-      {/* History */}
+      {/* All sessions */}
       <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-3">歷史場次</h2>
-        {historySessions.length === 0 ? (
-          <div className="card p-8 text-center text-text-muted">尚無歷史簽到紀錄</div>
+        <h2 className="text-lg font-semibold text-text-primary mb-3">所有場次</h2>
+        {pastSessions.length === 0 ? (
+          <div className="card p-8 text-center text-text-muted">尚無簽到紀錄</div>
         ) : (
           <div className="space-y-2">
-            {historySessions.map((s) => (
+            {pastSessions.map((s) => (
               <a key={s.id} href={`/courses/${courseId}/sessions/${s.id}`}
                 className="card px-4 py-3 flex items-center justify-between hover:shadow-md transition-shadow">
-                <span className="font-medium text-text-primary">{s.class_date}</span>
+                <div className="flex items-center gap-3">
+                  <span className="font-medium text-text-primary">{s.class_date}</span>
+                  {s.class_date === today && <span className="text-xs text-text-muted">今天</span>}
+                </div>
                 <span className={s.status === 'open' ? 'badge badge-success' : 'badge badge-muted'}>
                   {s.status === 'open' ? '進行中' : '已結束'}
                 </span>

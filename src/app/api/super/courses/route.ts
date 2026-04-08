@@ -27,3 +27,23 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, course_id: id });
 }
+
+export async function DELETE(req: NextRequest) {
+  await requireSuperAdmin();
+  const { id } = await req.json() as { id: string };
+  if (!id) {
+    return NextResponse.json({ error: 'missing_id' }, { status: 400 });
+  }
+
+  const db = getDB();
+
+  // Delete in order: attendance → sessions → nonce_log → course_admins → enrolled_students → courses
+  await db.prepare('DELETE FROM attendance WHERE course_id = ?').bind(id).run();
+  await db.prepare('DELETE FROM nonce_log WHERE session_id IN (SELECT id FROM sessions WHERE course_id = ?)').bind(id).run();
+  await db.prepare('DELETE FROM sessions WHERE course_id = ?').bind(id).run();
+  await db.prepare('DELETE FROM course_admins WHERE course_id = ?').bind(id).run();
+  await db.prepare('DELETE FROM enrolled_students WHERE course_id = ?').bind(id).run();
+  await db.prepare('DELETE FROM courses WHERE id = ?').bind(id).run();
+
+  return NextResponse.json({ ok: true });
+}
