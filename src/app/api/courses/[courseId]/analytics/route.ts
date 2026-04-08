@@ -18,7 +18,7 @@ export async function GET(
              GROUP_CONCAT(DISTINCT user_email) as accounts,
              COUNT(*) as total_signs
       FROM attendance
-      WHERE course_id = ? AND fingerprint_hash IS NOT NULL
+      WHERE course_id = ? AND fingerprint_hash IS NOT NULL AND reviewed_at IS NULL
       GROUP BY fingerprint_hash
       HAVING account_count > 1
       ORDER BY account_count DESC
@@ -48,7 +48,7 @@ export async function GET(
       SELECT a.id, a.user_email, a.session_id, s.class_date, a.scan_time, a.reaction_ms
       FROM attendance a
       INNER JOIN sessions s ON a.session_id = s.id
-      WHERE a.course_id = ? AND a.reaction_ms IS NOT NULL AND a.reaction_ms < 5000
+      WHERE a.course_id = ? AND a.reaction_ms IS NOT NULL AND a.reaction_ms < 5000 AND a.reviewed_at IS NULL
       ORDER BY a.reaction_ms ASC
     `)
     .bind(courseId)
@@ -59,9 +59,9 @@ export async function GET(
       SELECT a.id, a.user_email, a.session_id, s.class_date, a.fingerprint_hash, a.fingerprint_raw, a.scan_time
       FROM attendance a
       INNER JOIN sessions s ON a.session_id = s.id
-      WHERE a.course_id = ? AND a.fingerprint_hash IN (
+      WHERE a.course_id = ? AND a.reviewed_at IS NULL AND a.fingerprint_hash IN (
         SELECT fingerprint_hash FROM attendance
-        WHERE course_id = ? AND fingerprint_hash IS NOT NULL
+        WHERE course_id = ? AND fingerprint_hash IS NOT NULL AND reviewed_at IS NULL
         GROUP BY fingerprint_hash
         HAVING COUNT(DISTINCT user_email) > 1
       )

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import ConfirmDialog from '@/components/confirm-dialog';
 
 type FpCross = { fingerprint_hash: string; account_count: number; accounts: string; total_signs: number };
 type IpBurst = { session_id: string; class_date: string; ip: string; cnt: number; users: string };
@@ -25,7 +24,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
   const [courseName, setCourseName] = useState<string>('');
-  const [dialog, setDialog] = useState<{ title: string; message: string; danger?: boolean; onConfirm: () => void } | null>(null);
+
 
   const fetchData = useCallback(() => {
     fetch(`/api/courses/${courseId}/analytics`)
@@ -56,18 +55,8 @@ export default function AnalyticsPage() {
     fetchData();
   };
 
-  const deleteRecord = (id: string) => {
-    setDialog({
-      title: '刪除紀錄',
-      message: '確定要刪除此紀錄？此操作不可復原。',
-      danger: true,
-      onConfirm: async () => {
-        setActing(id);
-        await fetch(`/api/courses/${courseId}/attendance/${id}`, { method: 'DELETE' });
-        setActing(null);
-        fetchData();
-      },
-    });
+  const viewSession = (sessionId: string) => {
+    window.location.href = `/courses/${courseId}/sessions/${sessionId}`;
   };
 
   if (loading) {
@@ -172,10 +161,9 @@ export default function AnalyticsPage() {
                       className="btn btn-sm !min-h-0 !py-1 !px-2 text-xs bg-warning-100 text-warning-600 hover:bg-warning-50 disabled:opacity-50"
                     >標記已處理</button>
                     <button
-                      onClick={() => deleteRecord(r.id)}
-                      disabled={acting === r.id}
-                      className="btn btn-sm !min-h-0 !py-1 !px-2 text-xs bg-danger-100 text-danger-600 hover:bg-danger-50 disabled:opacity-50"
-                    >刪除</button>
+                      onClick={() => viewSession(r.session_id)}
+                      className="btn btn-sm !min-h-0 !py-1 !px-2 text-xs bg-info-100 text-info-500 hover:bg-info-50"
+                    >檢視</button>
                   </td>
                 </tr>
               ))}
@@ -241,10 +229,9 @@ export default function AnalyticsPage() {
                       className="btn btn-sm !min-h-0 !py-1 !px-2 text-xs bg-warning-100 text-warning-600 hover:bg-warning-50 disabled:opacity-50"
                     >標記已處理</button>
                     <button
-                      onClick={() => deleteRecord(r.id)}
-                      disabled={acting === r.id}
-                      className="btn btn-sm !min-h-0 !py-1 !px-2 text-xs bg-danger-100 text-danger-600 hover:bg-danger-50 disabled:opacity-50"
-                    >刪除</button>
+                      onClick={() => viewSession(r.session_id)}
+                      className="btn btn-sm !min-h-0 !py-1 !px-2 text-xs bg-info-100 text-info-500 hover:bg-info-50"
+                    >檢視</button>
                   </td>
                 </tr>
               ))}
@@ -253,14 +240,6 @@ export default function AnalyticsPage() {
         )}
       </details>
 
-      <ConfirmDialog
-        open={!!dialog}
-        title={dialog?.title ?? ''}
-        message={dialog?.message ?? ''}
-        danger={dialog?.danger}
-        onConfirm={() => { dialog?.onConfirm(); setDialog(null); }}
-        onCancel={() => setDialog(null)}
-      />
     </div>
   );
 }
