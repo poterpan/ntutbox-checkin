@@ -13,7 +13,7 @@ export async function GET(
   const attendance = await db
     .prepare(`
       SELECT id, user_email, user_name, scan_time, login_time, status,
-             fingerprint_hash, ip, reaction_ms, is_manual, created_at
+             fingerprint_hash, fingerprint_raw, ip, user_agent, reaction_ms, is_manual, created_at
       FROM attendance
       WHERE session_id = ? AND course_id = ?
       ORDER BY scan_time ASC
