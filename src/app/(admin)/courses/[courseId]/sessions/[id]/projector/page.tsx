@@ -147,11 +147,11 @@ export default function ProjectorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 sm:p-8 relative">
-      {/* Fullscreen toggle — top right, hidden when printing */}
+    <div className="h-dvh bg-white flex flex-col items-center justify-between overflow-hidden p-4 sm:p-6 relative">
+      {/* Fullscreen toggle — top right */}
       <button
         onClick={toggleFullscreen}
-        className="absolute top-4 right-4 btn btn-ghost btn-sm text-text-muted z-10 print:hidden"
+        className="absolute top-3 right-3 btn btn-ghost btn-sm text-text-muted z-10 print:hidden"
         title={isFullscreen ? '退出全螢幕' : '全螢幕'}
       >
         {isFullscreen ? (
@@ -165,46 +165,50 @@ export default function ProjectorPage() {
         )}
       </button>
 
-      {/* Course name — large and prominent so students don't scan the wrong one */}
-      <h1 className="text-3xl sm:text-5xl font-bold text-brand-700 mb-1 text-center leading-tight">
-        {courseName || '課堂簽到'}
-      </h1>
-      {classDate && (
-        <p className="text-text-muted text-base sm:text-lg mb-2">{classDate}</p>
-      )}
-      <p className="text-text-secondary text-base sm:text-xl mb-6 sm:mb-8">請用手機掃描 QR Code 簽到</p>
+      {/* Top: course name + subtitle */}
+      <div className="text-center shrink-0 pt-2">
+        <h1 className="text-2xl sm:text-4xl font-bold text-brand-700 leading-tight">
+          {courseName || '課堂簽到'}
+        </h1>
+        {classDate && (
+          <p className="text-text-muted text-sm sm:text-base">{classDate}</p>
+        )}
+        <p className="text-text-secondary text-sm sm:text-lg">請用手機掃描 QR Code 簽到</p>
+      </div>
 
-      {/* QR Code — iPad optimized sizing */}
-      {qrDataUrl ? (
-        <img
-          src={qrDataUrl}
-          alt="QR Code"
-          className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96"
-        />
-      ) : (
-        <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 bg-surface-muted rounded-2xl flex items-center justify-center">
-          <p className="text-text-muted animate-pulse">載入中...</p>
-        </div>
-      )}
+      {/* Center: QR Code — fills available space, fixed aspect ratio */}
+      <div className="flex-1 flex items-center justify-center min-h-0 py-2">
+        {qrDataUrl ? (
+          <img
+            src={qrDataUrl}
+            alt="QR Code"
+            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 max-h-full object-contain"
+          />
+        ) : (
+          <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 bg-surface-muted rounded-2xl flex items-center justify-center">
+            <p className="text-text-muted animate-pulse">載入中...</p>
+          </div>
+        )}
+      </div>
 
-      {/* Bottom area: time + mode info */}
-      <div className="mt-6 sm:mt-8 text-center">
-        <p className="text-4xl sm:text-5xl font-mono font-bold text-text-primary tracking-wider">
+      {/* Bottom: time + countdown */}
+      <div className="text-center shrink-0 pb-2">
+        <p className="text-3xl sm:text-5xl font-mono font-bold text-text-primary tracking-wider">
           {currentTime}
         </p>
 
         {mode === 'dynamic' ? (
-          <div className="mt-4 w-48 sm:w-64 mx-auto">
+          <div className="mt-2 w-48 sm:w-64 mx-auto">
             <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-brand-500 rounded-full transition-all duration-1000"
                 style={{ width: `${((30 - countdown) / 30) * 100}%` }}
               />
             </div>
-            <p className="text-text-muted text-sm mt-2">{countdown}s 後更新</p>
+            <p className="text-text-muted text-xs sm:text-sm mt-1">{countdown}s 後更新</p>
           </div>
         ) : (
-          <div className="mt-4 flex flex-col items-center gap-3">
+          <div className="mt-2 flex flex-col items-center gap-2">
             <span className="badge badge-info text-sm">靜態模式 — 整堂課有效</span>
             <button onClick={handlePrint} className="btn btn-secondary btn-sm print:hidden">
               列印 QR Code
