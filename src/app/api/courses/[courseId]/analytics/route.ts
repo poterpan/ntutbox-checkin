@@ -44,7 +44,7 @@ export async function GET(
 
   const fastReaction = await db
     .prepare(`
-      SELECT user_email, session_id, scan_time, reaction_ms
+      SELECT id, user_email, session_id, scan_time, reaction_ms
       FROM attendance
       WHERE course_id = ? AND reaction_ms IS NOT NULL AND reaction_ms < 5000
       ORDER BY reaction_ms ASC
@@ -52,9 +52,25 @@ export async function GET(
     .bind(courseId)
     .all();
 
+  const fpDetails = await db
+    .prepare(`
+      SELECT id, user_email, session_id, fingerprint_hash, scan_time
+      FROM attendance
+      WHERE course_id = ? AND fingerprint_hash IN (
+        SELECT fingerprint_hash FROM attendance
+        WHERE course_id = ? AND fingerprint_hash IS NOT NULL
+        GROUP BY fingerprint_hash
+        HAVING COUNT(DISTINCT user_email) > 1
+      )
+      ORDER BY fingerprint_hash, scan_time
+    `)
+    .bind(courseId, courseId)
+    .all();
+
   return NextResponse.json({
     fp_cross_account: fpCrossAccount.results,
     ip_burst: ipBurst.results,
     fast_reaction: fastReaction.results,
+    fp_details: fpDetails.results,
   });
 }

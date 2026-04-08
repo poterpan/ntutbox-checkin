@@ -46,6 +46,7 @@ export default function CourseControlPage() {
       <div className="flex gap-4 mb-6 text-sm">
         <a href={`/courses/${courseId}/analytics`} className="text-blue-600 hover:underline">異常分析</a>
         <a href={`/courses/${courseId}/students`} className="text-blue-600 hover:underline">修課名單</a>
+        <a href={`/courses/${courseId}/admins`} className="text-blue-600 hover:underline">助教管理</a>
       </div>
 
       {loading ? (
