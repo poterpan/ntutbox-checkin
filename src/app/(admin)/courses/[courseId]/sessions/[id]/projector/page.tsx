@@ -147,11 +147,11 @@ export default function ProjectorPage() {
   }
 
   return (
-    <div className="h-dvh bg-white flex flex-col items-center justify-between overflow-hidden p-4 sm:p-6 relative">
-      {/* Fullscreen toggle — top right */}
+    <div className="fixed inset-0 bg-white flex flex-col items-center overflow-hidden touch-none select-none">
+      {/* Fullscreen toggle */}
       <button
         onClick={toggleFullscreen}
-        className="absolute top-3 right-3 btn btn-ghost btn-sm text-text-muted z-10 print:hidden"
+        className="absolute top-2 right-2 btn btn-ghost btn-sm text-text-muted z-10 print:hidden"
         title={isFullscreen ? '退出全螢幕' : '全螢幕'}
       >
         {isFullscreen ? (
@@ -165,54 +165,46 @@ export default function ProjectorPage() {
         )}
       </button>
 
-      {/* Top: course name + subtitle */}
-      <div className="text-center shrink-0 pt-2">
-        <h1 className="text-2xl sm:text-4xl font-bold text-brand-700 leading-tight">
+      {/* Top */}
+      <div className="text-center pt-3 shrink-0">
+        <h1 className="text-2xl sm:text-3xl font-bold text-brand-700 leading-tight">
           {courseName || '課堂簽到'}
         </h1>
-        {classDate && (
-          <p className="text-text-muted text-sm sm:text-base">{classDate}</p>
-        )}
-        <p className="text-text-secondary text-sm sm:text-lg">請用手機掃描 QR Code 簽到</p>
+        <p className="text-text-secondary text-xs sm:text-sm">
+          {classDate ? `${classDate} · ` : ''}請用手機掃描 QR Code 簽到
+        </p>
       </div>
 
-      {/* Center: QR Code — fills available space, fixed aspect ratio */}
-      <div className="flex-1 flex items-center justify-center min-h-0 py-2">
+      {/* QR — takes all remaining space, auto-sizes */}
+      <div className="flex-1 flex items-center justify-center min-h-0 w-full p-2">
         {qrDataUrl ? (
-          <img
-            src={qrDataUrl}
-            alt="QR Code"
-            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 max-h-full object-contain"
-          />
+          <img src={qrDataUrl} alt="QR Code" className="max-h-full max-w-full aspect-square object-contain" />
         ) : (
-          <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 bg-surface-muted rounded-2xl flex items-center justify-center">
+          <div className="h-full aspect-square max-h-full bg-surface-muted rounded-2xl flex items-center justify-center">
             <p className="text-text-muted animate-pulse">載入中...</p>
           </div>
         )}
       </div>
 
-      {/* Bottom: time + countdown */}
-      <div className="text-center shrink-0 pb-2">
-        <p className="text-3xl sm:text-5xl font-mono font-bold text-text-primary tracking-wider">
+      {/* Bottom */}
+      <div className="text-center pb-3 shrink-0">
+        <p className="text-2xl sm:text-4xl font-mono font-bold text-text-primary tracking-wider">
           {currentTime}
         </p>
-
         {mode === 'dynamic' ? (
-          <div className="mt-2 w-48 sm:w-64 mx-auto">
-            <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">
+          <div className="mt-1 w-40 sm:w-56 mx-auto">
+            <div className="h-1 bg-surface-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-brand-500 rounded-full transition-all duration-1000"
                 style={{ width: `${((30 - countdown) / 30) * 100}%` }}
               />
             </div>
-            <p className="text-text-muted text-xs sm:text-sm mt-1">{countdown}s 後更新</p>
+            <p className="text-text-muted text-xs mt-1">{countdown}s 後更新</p>
           </div>
         ) : (
-          <div className="mt-2 flex flex-col items-center gap-2">
-            <span className="badge badge-info text-sm">靜態模式 — 整堂課有效</span>
-            <button onClick={handlePrint} className="btn btn-secondary btn-sm print:hidden">
-              列印 QR Code
-            </button>
+          <div className="mt-1 flex flex-col items-center gap-1">
+            <span className="badge badge-info text-xs">靜態模式 — 整堂課有效</span>
+            <button onClick={handlePrint} className="btn btn-secondary btn-sm print:hidden">列印</button>
           </div>
         )}
       </div>
