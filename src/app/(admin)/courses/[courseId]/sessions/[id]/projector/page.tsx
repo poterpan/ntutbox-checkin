@@ -1,10 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import QRCode from 'qrcode';
 
-const REFRESH_INTERVAL = 30_000; // 30 seconds
+const REFRESH_INTERVAL = 30_000;
+
+type QrData = {
+  nonce: string;
+  mode: string;
+  course_name?: string;
+  class_date?: string;
+};
 
 export default function ProjectorPage() {
   const { courseId, id } = useParams<{ courseId: string; id: string }>();
@@ -12,22 +19,27 @@ export default function ProjectorPage() {
   const [countdown, setCountdown] = useState(30);
   const [currentTime, setCurrentTime] = useState('');
   const [mode, setMode] = useState<'dynamic' | 'static'>('dynamic');
+  const [courseName, setCourseName] = useState('');
+  const [classDate, setClassDate] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const fetchQR = useCallback(async () => {
+    const res = await fetch(`/api/courses/${courseId}/sessions/${id}/qr`);
+    if (!res.ok) return;
+    const data = await res.json() as QrData;
+    const url = `${window.location.origin}/scan/${data.nonce}`;
+    const dataUrl = await QRCode.toDataURL(url, {
+      width: 600, margin: 2,
+      color: { dark: '#0f172a', light: '#ffffff' },
+    });
+    setQrDataUrl(dataUrl);
+    setMode(data.mode as 'dynamic' | 'static');
+    if (data.course_name) setCourseName(data.course_name);
+    if (data.class_date) setClassDate(data.class_date);
+    setCountdown(30);
+  }, [courseId, id]);
 
   useEffect(() => {
-    const fetchQR = async () => {
-      const res = await fetch(`/api/courses/${courseId}/sessions/${id}/qr`);
-      if (!res.ok) return;
-      const data = await res.json() as { nonce: string; mode: string };
-      const url = `${window.location.origin}/scan/${data.nonce}`;
-      const dataUrl = await QRCode.toDataURL(url, {
-        width: 512, margin: 2,
-        color: { dark: '#0f172a', light: '#ffffff' },
-      });
-      setQrDataUrl(dataUrl);
-      setMode(data.mode as 'dynamic' | 'static');
-      setCountdown(30);
-    };
-
     fetchQR();
     const qrTimer = setInterval(fetchQR, REFRESH_INTERVAL);
 
@@ -40,11 +52,23 @@ export default function ProjectorPage() {
     tick();
     const countdownTimer = setInterval(tick, 1000);
 
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+
     return () => {
       clearInterval(qrTimer);
       clearInterval(countdownTimer);
+      document.removeEventListener('fullscreenchange', onFsChange);
     };
-  }, [courseId, id]);
+  }, [fetchQR]);
+
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  };
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
@@ -56,29 +80,44 @@ export default function ProjectorPage() {
     const html = doc.createElement('html');
     const head = doc.createElement('head');
     const title = doc.createElement('title');
-    title.textContent = '簽到 QR Code';
+    title.textContent = `簽到 QR Code — ${courseName}`;
     head.appendChild(title);
 
     const style = doc.createElement('style');
-    style.textContent = 'body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;font-family:sans-serif;}h1{font-size:2rem;margin-bottom:0.5rem}p{color:#666;margin-bottom:1.5rem}img{width:400px;height:400px}.note{color:#999;margin-top:2rem;font-size:0.875rem}';
+    style.textContent = [
+      'body{display:flex;flex-direction:column;align-items:center;justify-content:center;',
+      'min-height:100vh;margin:0;font-family:sans-serif;padding:2rem}',
+      '.course{font-size:2.5rem;font-weight:bold;margin-bottom:0.25rem}',
+      '.date{font-size:1.25rem;color:#666;margin-bottom:2rem}',
+      '.subtitle{color:#666;margin-bottom:2rem;font-size:1.1rem}',
+      'img{width:400px;height:400px}',
+      '.note{color:#999;margin-top:2rem;font-size:0.875rem}',
+    ].join('');
     head.appendChild(style);
     html.appendChild(head);
 
     const body = doc.createElement('body');
 
-    const h1 = doc.createElement('h1');
-    h1.textContent = '課堂簽到';
-    body.appendChild(h1);
+    const courseEl = doc.createElement('div');
+    courseEl.className = 'course';
+    courseEl.textContent = courseName || '課堂簽到';
+    body.appendChild(courseEl);
 
-    const p = doc.createElement('p');
-    p.textContent = '請用手機掃描 QR Code';
-    body.appendChild(p);
+    const dateEl = doc.createElement('div');
+    dateEl.className = 'date';
+    dateEl.textContent = classDate || '';
+    body.appendChild(dateEl);
+
+    const subtitle = doc.createElement('div');
+    subtitle.className = 'subtitle';
+    subtitle.textContent = '請用手機掃描 QR Code 簽到';
+    body.appendChild(subtitle);
 
     const img = doc.createElement('img');
     img.src = qrDataUrl;
     body.appendChild(img);
 
-    const note = doc.createElement('p');
+    const note = doc.createElement('div');
     note.className = 'note';
     note.textContent = '靜態 QR Code — 整堂課有效';
     body.appendChild(note);
@@ -90,23 +129,54 @@ export default function ProjectorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold text-text-primary mb-1">課堂簽到</h1>
-      <p className="text-text-muted text-lg mb-8">請用手機掃描 QR Code</p>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 sm:p-8 relative">
+      {/* Fullscreen toggle — top right, hidden when printing */}
+      <button
+        onClick={toggleFullscreen}
+        className="absolute top-4 right-4 btn btn-ghost btn-sm text-text-muted z-10 print:hidden"
+        title={isFullscreen ? '退出全螢幕' : '全螢幕'}
+      >
+        {isFullscreen ? (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+          </svg>
+        )}
+      </button>
 
+      {/* Course name — large and prominent so students don't scan the wrong one */}
+      <h1 className="text-3xl sm:text-5xl font-bold text-brand-700 mb-1 text-center leading-tight">
+        {courseName || '課堂簽到'}
+      </h1>
+      {classDate && (
+        <p className="text-text-muted text-base sm:text-lg mb-2">{classDate}</p>
+      )}
+      <p className="text-text-secondary text-base sm:text-xl mb-6 sm:mb-8">請用手機掃描 QR Code 簽到</p>
+
+      {/* QR Code — iPad optimized sizing */}
       {qrDataUrl ? (
-        <img src={qrDataUrl} alt="QR Code" className="w-80 h-80 sm:w-96 sm:h-96" />
+        <img
+          src={qrDataUrl}
+          alt="QR Code"
+          className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96"
+        />
       ) : (
-        <div className="w-80 h-80 sm:w-96 sm:h-96 bg-surface-muted rounded-2xl flex items-center justify-center">
+        <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 bg-surface-muted rounded-2xl flex items-center justify-center">
           <p className="text-text-muted animate-pulse">載入中...</p>
         </div>
       )}
 
-      <div className="mt-8 text-center">
-        <p className="text-5xl font-mono font-bold text-text-primary tracking-wider">{currentTime}</p>
+      {/* Bottom area: time + mode info */}
+      <div className="mt-6 sm:mt-8 text-center">
+        <p className="text-4xl sm:text-5xl font-mono font-bold text-text-primary tracking-wider">
+          {currentTime}
+        </p>
 
         {mode === 'dynamic' ? (
-          <div className="mt-4 w-64 mx-auto">
+          <div className="mt-4 w-48 sm:w-64 mx-auto">
             <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-brand-500 rounded-full transition-all duration-1000"
@@ -116,13 +186,11 @@ export default function ProjectorPage() {
             <p className="text-text-muted text-sm mt-2">{countdown}s 後更新</p>
           </div>
         ) : (
-          <div className="mt-4">
+          <div className="mt-4 flex flex-col items-center gap-3">
             <span className="badge badge-info text-sm">靜態模式 — 整堂課有效</span>
-            <div className="mt-3">
-              <button onClick={handlePrint} className="btn btn-secondary btn-sm">
-                列印 QR Code
-              </button>
-            </div>
+            <button onClick={handlePrint} className="btn btn-secondary btn-sm print:hidden">
+              列印 QR Code
+            </button>
           </div>
         )}
       </div>
