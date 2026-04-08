@@ -14,13 +14,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-surface-dim">
+      <nav className="bg-brand-700 text-white">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <a href="/dashboard" className="font-bold text-lg">簽到管理系統</a>
+          <a href="/dashboard" className="font-bold text-lg tracking-tight">NTUT 簽到管理</a>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{session.user.email}</span>
-            <a href="/api/auth/signout" className="text-sm text-red-600 hover:underline">登出</a>
+            <span className="text-sm text-white/70">{session.user.name ?? session.user.email}</span>
+            <a href="/api/auth/signout" className="text-sm text-white/50 hover:text-white/80 transition-colors">登出</a>
           </div>
         </div>
       </nav>

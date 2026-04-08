@@ -25,6 +25,8 @@ export default function SessionViewPage() {
   const [manualLoading, setManualLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingStatus, setEditingStatus] = useState<Record<number, boolean>>({});
+  const [courseName, setCourseName] = useState<string>('');
+  const [classDate, setClassDate] = useState<string>('');
 
   const fetchList = useCallback(async () => {
     const res = await fetch(`/api/courses/${courseId}/sessions/${id}/list`);
@@ -46,8 +48,25 @@ export default function SessionViewPage() {
   useEffect(() => {
     fetchList();
     const timer = setInterval(fetchList, 5000);
+
+    // Fetch course name for breadcrumb
+    fetch('/api/courses')
+      .then((r) => r.json() as Promise<{ courses?: { id: string; name: string }[] }>)
+      .then((data) => {
+        const c = data.courses?.find((c) => c.id === courseId);
+        if (c) setCourseName(c.name);
+      });
+
+    // Fetch session date
+    fetch(`/api/courses/${courseId}/sessions/create`)
+      .then((r) => r.json() as Promise<{ sessions?: { id: string; class_date: string }[] }>)
+      .then((data) => {
+        const s = data.sessions?.find((s) => s.id === id);
+        if (s) setClassDate(s.class_date);
+      });
+
     return () => clearInterval(timer);
-  }, [fetchList]);
+  }, [fetchList, courseId, id]);
 
   const handleCloseSession = async () => {
     if (!confirm('確定要結束此簽到？結束後學生將無法再掃碼簽到。')) return;
@@ -124,92 +143,126 @@ export default function SessionViewPage() {
   const statusLabel = (s: string) => {
     switch (s) { case 'on_time': return '準時'; case 'late': return '遲到'; case 'absent': return '缺席'; case 'manual': return '補簽'; default: return s; }
   };
-  const statusColor = (s: string) => {
-    switch (s) { case 'on_time': return 'text-green-600'; case 'late': return 'text-yellow-600'; case 'absent': return 'text-red-600'; case 'manual': return 'text-blue-600'; default: return 'text-gray-600'; }
+  const statusBadge = (s: string) => {
+    switch (s) { case 'on_time': return 'badge badge-success'; case 'late': return 'badge badge-warning'; case 'absent': return 'badge badge-danger'; case 'manual': return 'badge badge-info'; default: return 'badge badge-muted'; }
   };
 
   const isClosed = sessionStatus === 'closed';
 
+  // Stats
+  const onTimeCount = attendance.filter((r) => r.status === 'on_time').length;
+  const lateCount = attendance.filter((r) => r.status === 'late').length;
+  const absentCount = attendance.filter((r) => r.status === 'absent').length;
+  const manualCount = attendance.filter((r) => r.status === 'manual').length;
+  const total = attendance.length + notSigned.length;
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">即時簽到名單</h1>
-        <div className="flex gap-3 flex-wrap">
-          <a href={`/courses/${courseId}/sessions/${id}/projector`} target="_blank"
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm">
-            開啟投影頁
-          </a>
-          <a href={`/api/courses/${courseId}/sessions/${id}/export`}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm">
-            匯出 CSV
-          </a>
-          <button
-            onClick={() => setShowManualModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
-          >
-            手動補簽
-          </button>
-          <button
-            onClick={handleToggleQrMode}
-            disabled={isClosed}
-            className={`px-4 py-2 rounded-lg text-sm text-white ${
-              isClosed
-                ? 'bg-gray-400 cursor-not-allowed'
-                : qrMode === 'dynamic'
-                  ? 'bg-indigo-600 hover:bg-indigo-700'
-                  : 'bg-teal-600 hover:bg-teal-700'
-            }`}
-          >
-            {qrMode === 'dynamic' ? '切換靜態 QR' : '切換動態 QR'}
-          </button>
-          <button
-            onClick={handleCloseSession}
-            disabled={isClosed}
-            className={`px-4 py-2 rounded-lg text-sm text-white ${
-              isClosed
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-red-600 hover:bg-red-700'
-            }`}
-          >
+      {/* Breadcrumb */}
+      <nav className="text-sm text-text-muted mb-4">
+        <a href="/dashboard" className="hover:text-brand-500">我的課程</a>
+        <span className="mx-2">/</span>
+        <a href={`/courses/${courseId}`} className="hover:text-brand-500">{courseName || courseId}</a>
+        <span className="mx-2">/</span>
+        <span className="text-text-primary">{classDate || id}</span>
+      </nav>
+
+      {/* Stats summary bar */}
+      <div className="card p-4 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="text-xl font-bold text-text-primary">即時簽到名單</h1>
+          <div className="flex items-center gap-2">
+            {isClosed && <span className="badge badge-danger">已結束</span>}
+            {!isClosed && qrMode === 'static' && <span className="badge badge-info">靜態 QR</span>}
+            {!isClosed && qrMode === 'dynamic' && <span className="badge badge-success">動態 QR</span>}
+          </div>
+        </div>
+
+        {/* Colored stat segments */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+          <div className="bg-surface-muted rounded-lg px-3 py-2">
+            <p className="text-2xl font-bold text-text-primary">{total}</p>
+            <p className="text-xs text-text-muted">總人數</p>
+          </div>
+          <div className="bg-success-50 rounded-lg px-3 py-2">
+            <p className="text-2xl font-bold text-success-500">{onTimeCount}</p>
+            <p className="text-xs text-text-muted">準時</p>
+          </div>
+          <div className="bg-warning-50 rounded-lg px-3 py-2">
+            <p className="text-2xl font-bold text-warning-500">{lateCount}</p>
+            <p className="text-xs text-text-muted">遲到</p>
+          </div>
+          <div className="bg-info-50 rounded-lg px-3 py-2">
+            <p className="text-2xl font-bold text-info-500">{manualCount}</p>
+            <p className="text-xs text-text-muted">補簽</p>
+          </div>
+          <div className="bg-danger-50 rounded-lg px-3 py-2">
+            <p className="text-2xl font-bold text-danger-500">{notSigned.length}</p>
+            <p className="text-xs text-text-muted">未簽到</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        {/* Primary actions */}
+        <a href={`/courses/${courseId}/sessions/${id}/projector`} target="_blank"
+          className="btn btn-primary btn-sm">
+          投影頁
+        </a>
+        <button onClick={() => setShowManualModal(true)} className="btn btn-primary btn-sm">
+          手動補簽
+        </button>
+
+        {/* Secondary actions */}
+        <a href={`/api/courses/${courseId}/sessions/${id}/export`}
+          className="btn btn-secondary btn-sm">
+          匯出 CSV
+        </a>
+        <button onClick={handleToggleQrMode} disabled={isClosed} className="btn btn-secondary btn-sm">
+          {qrMode === 'dynamic' ? '切換靜態 QR' : '切換動態 QR'}
+        </button>
+
+        {/* Danger action — right aligned */}
+        <div className="ml-auto">
+          <button onClick={handleCloseSession} disabled={isClosed}
+            className={isClosed ? 'btn btn-ghost btn-sm cursor-not-allowed' : 'btn btn-danger btn-sm'}>
             {isClosed ? '已結束' : '結束簽到'}
           </button>
         </div>
       </div>
 
-      <div className="mb-2 text-sm text-gray-500">
-        已簽到 {attendance.length} 人 / 未簽到 {notSigned.length} 人
-        {isClosed && <span className="ml-2 text-red-500 font-medium">（簽到已結束）</span>}
-        {qrMode === 'static' && !isClosed && <span className="ml-2 text-teal-600 font-medium">（靜態 QR 模式）</span>}
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border mb-6">
+      {/* Attendance table */}
+      <div className="card mb-6">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
+          <thead className="bg-surface-muted border-b border-border">
             <tr>
-              <th className="text-left px-4 py-3">姓名</th>
-              <th className="text-left px-4 py-3">Email</th>
-              <th className="text-left px-4 py-3">掃碼時間</th>
-              <th className="text-left px-4 py-3">狀態</th>
-              <th className="text-left px-4 py-3">操作</th>
+              <th className="text-left px-4 py-3 font-medium text-text-secondary">姓名</th>
+              <th className="text-left px-4 py-3 font-medium text-text-secondary">Email</th>
+              <th className="text-left px-4 py-3 font-medium text-text-secondary">掃碼時間</th>
+              <th className="text-left px-4 py-3 font-medium text-text-secondary">狀態</th>
+              <th className="text-left px-4 py-3 font-medium text-text-secondary">操作</th>
             </tr>
           </thead>
           <tbody>
             {attendance.map((r) => (
               <Fragment key={r.id}>
-                <tr className="border-b last:border-0">
-                  <td className="px-4 py-3">{r.user_name ?? '-'}</td>
-                  <td className="px-4 py-3 text-gray-500">{r.user_email}</td>
-                  <td className="px-4 py-3 text-gray-500">
+                <tr className="border-b border-border last:border-0">
+                  <td className="px-4 py-3 text-text-primary">{r.user_name ?? '-'}</td>
+                  <td className="px-4 py-3 text-text-muted">{r.user_email}</td>
+                  <td className="px-4 py-3 text-text-muted">
                     {new Date(r.scan_time).toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei' })}
                   </td>
-                  <td className={`px-4 py-3 font-medium ${statusColor(r.status)}`}>{statusLabel(r.status)}</td>
+                  <td className="px-4 py-3">
+                    <span className={statusBadge(r.status)}>{statusLabel(r.status)}</span>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <select
                         value={r.status}
                         disabled={editingStatus[r.id]}
                         onChange={(e) => handleStatusChange(r.id, e.target.value)}
-                        className="border rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
                       >
                         <option value="on_time">準時</option>
                         <option value="late">遲到</option>
@@ -218,7 +271,7 @@ export default function SessionViewPage() {
                       </select>
                       <button
                         onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
-                        className="text-gray-400 hover:text-gray-600 text-xs px-2 py-1 rounded hover:bg-gray-100"
+                        className="btn btn-ghost btn-sm !min-h-0 !py-1 !px-2 text-xs"
                         title="查看裝置資訊"
                       >
                         {expandedId === r.id ? '收起' : '裝置'}
@@ -227,32 +280,32 @@ export default function SessionViewPage() {
                   </td>
                 </tr>
                 {expandedId === r.id && (
-                  <tr className="bg-gray-50">
+                  <tr className="bg-surface-muted">
                     <td colSpan={5} className="px-6 py-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                         <div>
-                          <span className="font-medium text-gray-700">Fingerprint Hash:</span>{' '}
-                          <span className="text-gray-500 font-mono">{r.fingerprint_hash ?? '-'}</span>
+                          <span className="font-medium text-text-secondary">Fingerprint Hash:</span>{' '}
+                          <span className="text-text-muted font-mono">{r.fingerprint_hash ?? '-'}</span>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700">IP:</span>{' '}
-                          <span className="text-gray-500 font-mono">{r.ip ?? '-'}</span>
+                          <span className="font-medium text-text-secondary">IP:</span>{' '}
+                          <span className="text-text-muted font-mono">{r.ip ?? '-'}</span>
                         </div>
                         <div className="md:col-span-2">
-                          <span className="font-medium text-gray-700">User Agent:</span>{' '}
-                          <span className="text-gray-500 break-all">{r.user_agent ?? '-'}</span>
+                          <span className="font-medium text-text-secondary">User Agent:</span>{' '}
+                          <span className="text-text-muted break-all">{r.user_agent ?? '-'}</span>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700">Reaction Time:</span>{' '}
-                          <span className="text-gray-500">{r.reaction_ms != null ? `${r.reaction_ms} ms` : '-'}</span>
+                          <span className="font-medium text-text-secondary">Reaction Time:</span>{' '}
+                          <span className="text-text-muted">{r.reaction_ms != null ? `${r.reaction_ms} ms` : '-'}</span>
                         </div>
                         {r.fingerprint_raw && (
                           <div className="md:col-span-2">
                             <details>
-                              <summary className="font-medium text-gray-700 cursor-pointer hover:text-gray-900">
+                              <summary className="font-medium text-text-secondary cursor-pointer hover:text-text-primary">
                                 Raw Fingerprint Components (JSON)
                               </summary>
-                              <pre className="mt-2 p-3 bg-gray-100 rounded text-xs overflow-x-auto max-h-60 whitespace-pre-wrap break-all">
+                              <pre className="mt-2 p-3 bg-surface-dim rounded text-xs overflow-x-auto max-h-60 whitespace-pre-wrap break-all">
                                 {(() => {
                                   try { return JSON.stringify(JSON.parse(r.fingerprint_raw as string), null, 2); }
                                   catch { return r.fingerprint_raw; }
@@ -267,28 +320,37 @@ export default function SessionViewPage() {
                 )}
               </Fragment>
             ))}
+            {attendance.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-text-muted">尚無簽到紀錄</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
+      {/* Not signed section */}
       {notSigned.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3 text-red-600">未簽到</h2>
-          <div className="bg-white rounded-lg shadow-sm border">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-lg font-semibold text-danger-500">未簽到</h2>
+            <span className="badge badge-danger">{notSigned.length}</span>
+          </div>
+          <div className="card border-danger-100">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-danger-50 border-b border-danger-100">
                 <tr>
-                  <th className="text-left px-4 py-3">學號</th>
-                  <th className="text-left px-4 py-3">姓名</th>
-                  <th className="text-left px-4 py-3">Email</th>
+                  <th className="text-left px-4 py-3 font-medium text-text-secondary">學號</th>
+                  <th className="text-left px-4 py-3 font-medium text-text-secondary">姓名</th>
+                  <th className="text-left px-4 py-3 font-medium text-text-secondary">Email</th>
                 </tr>
               </thead>
               <tbody>
                 {notSigned.map((s) => (
-                  <tr key={s.email} className="border-b last:border-0">
-                    <td className="px-4 py-3">{s.student_id ?? '-'}</td>
-                    <td className="px-4 py-3">{s.name ?? '-'}</td>
-                    <td className="px-4 py-3 text-gray-500">{s.email}</td>
+                  <tr key={s.email} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3 text-text-primary">{s.student_id ?? '-'}</td>
+                    <td className="px-4 py-3 text-text-primary">{s.name ?? '-'}</td>
+                    <td className="px-4 py-3 text-text-muted">{s.email}</td>
                   </tr>
                 ))}
               </tbody>
@@ -300,53 +362,47 @@ export default function SessionViewPage() {
       {/* Manual Check-in Modal */}
       {showManualModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-lg font-bold mb-4">手動補簽</h2>
+          <div className="card p-6 w-full max-w-md mx-4 shadow-lg">
+            <h2 className="text-lg font-bold text-text-primary mb-4">手動補簽</h2>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-text-secondary mb-1">
+                  Email <span className="text-danger-500">*</span>
                 </label>
                 <input
                   type="email"
                   value={manualEmail}
                   onChange={(e) => setManualEmail(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="student@ntut.edu.tw"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">姓名</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">姓名</label>
                 <input
                   type="text"
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="選填"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">補簽原因</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">補簽原因</label>
                 <input
                   type="text"
                   value={manualReason}
                   onChange={(e) => setManualReason(e.target.value)}
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="選填"
                 />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-5">
-              <button
-                onClick={() => setShowManualModal(false)}
-                className="px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
-              >
+              <button onClick={() => setShowManualModal(false)} className="btn btn-ghost btn-sm">
                 取消
               </button>
               <button
                 onClick={handleManualSubmit}
                 disabled={manualLoading || !manualEmail.trim()}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="btn btn-primary btn-sm"
               >
                 {manualLoading ? '送出中...' : '確認補簽'}
               </button>
