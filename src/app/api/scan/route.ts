@@ -14,6 +14,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_nonce' }, { status: 400 });
   }
 
+  // Consume dynamic nonce (single-use). Static nonces are NOT consumed.
+  const kv = getKV();
+  await kv.delete(`nonce:${nonce}`);
+
   // Check session is still open
   const db = getDB();
   const session = await db
@@ -27,7 +31,6 @@ export async function POST(req: NextRequest) {
   // Create pending record in KV
   const pending_id = crypto.randomUUID();
   const scan_time = Date.now();
-  const kv = getKV();
 
   await kv.put(
     `pending:${pending_id}`,

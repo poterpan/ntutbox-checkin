@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireCourseAdmin } from '@/lib/permissions';
 import { getDB } from '@/lib/cloudflare';
 
+function csvEscape(val: unknown): string {
+  let s = String(val ?? '');
+  if (s.startsWith('=') || s.startsWith('+') || s.startsWith('-') || s.startsWith('@')) {
+    s = `'${s}`;
+  }
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ courseId: string; id: string }> },
@@ -30,15 +38,15 @@ export async function GET(
     .first<{ class_date: string }>();
 
   const BOM = '\uFEFF';
-  const header = '學號,姓名,Email,掃碼時間,登入時間,狀態,是否手動,備註,IP,反應時間ms';
+  const header = ['"學號"', '"姓名"', '"Email"', '"掃碼時間"', '"登入時間"', '"狀態"', '"是否手動"', '"備註"', '"IP"', '"反應時間ms"'].join(',');
   const csvRows = rows.results.map((r: Record<string, unknown>) => {
     const scanDate = r.scan_time ? new Date(r.scan_time as number).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : '';
     const loginDate = r.login_time ? new Date(r.login_time as number).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : '';
     return [
-      r.student_id ?? '', r.user_name ?? '', r.user_email,
-      scanDate, loginDate, r.status,
-      r.is_manual ? '是' : '否', r.manual_reason ?? '',
-      r.ip ?? '', r.reaction_ms ?? '',
+      csvEscape(r.student_id), csvEscape(r.user_name), csvEscape(r.user_email),
+      csvEscape(scanDate), csvEscape(loginDate), csvEscape(r.status),
+      csvEscape(r.is_manual ? '是' : '否'), csvEscape(r.manual_reason),
+      csvEscape(r.ip), csvEscape(r.reaction_ms),
     ].join(',');
   });
 

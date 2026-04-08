@@ -16,6 +16,11 @@ export async function POST(
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
   }
 
+  const domain = process.env.ALLOWED_EMAIL_DOMAIN ?? 'ntut.org.tw';
+  if (!user_email.trim().toLowerCase().endsWith(`@${domain}`)) {
+    return NextResponse.json({ error: 'invalid_email_domain' }, { status: 400 });
+  }
+
   const db = getDB();
 
   // Verify session belongs to this course and exists

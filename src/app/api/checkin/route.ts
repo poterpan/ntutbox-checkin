@@ -33,14 +33,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/error?code=pending_expired', req.url));
   }
 
+  // Delete pending immediately (single-use token)
+  await kv.delete(`pending:${pending_id}`);
+
   const db = getDB();
   const sessionRow = await db
-    .prepare('SELECT early_open_at, class_start_at, late_cutoff_at FROM sessions WHERE id = ?')
+    .prepare('SELECT early_open_at, class_start_at, late_cutoff_at, status FROM sessions WHERE id = ?')
     .bind(pending.session_id)
-    .first<{ early_open_at: number; class_start_at: number; late_cutoff_at: number }>();
+    .first<{ early_open_at: number; class_start_at: number; late_cutoff_at: number; status: string }>();
 
   if (!sessionRow) {
     return NextResponse.redirect(new URL('/error?code=invalid_session', req.url));
+  }
+
+  // Check session is still open
+  if (sessionRow.status !== 'open') {
+    return NextResponse.redirect(new URL('/error?code=session_closed', req.url));
   }
 
   const status = determineStatus(
@@ -51,7 +59,6 @@ export async function GET(req: NextRequest) {
   );
 
   if (status === 'too_early') {
-    await kv.delete(`pending:${pending_id}`);
     return NextResponse.redirect(new URL('/result?status=too_early', req.url));
   }
 
@@ -83,12 +90,10 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     const msg = String((err as Error)?.message ?? err);
     if (msg.includes('UNIQUE')) {
-      await kv.delete(`pending:${pending_id}`);
       return NextResponse.redirect(new URL('/result?status=already_signed', req.url));
     }
     throw err;
   }
 
-  await kv.delete(`pending:${pending_id}`);
   return NextResponse.redirect(new URL(`/result?status=${status}`, req.url));
 }

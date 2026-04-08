@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireCourseAdmin } from '@/lib/permissions';
 import { getDB } from '@/lib/cloudflare';
 
+const ROLE_LEVEL: Record<string, number> = { ta: 1, instructor: 2, owner: 3, super: 4 };
+
 // GET: list admins for this course
 export async function GET(
   req: NextRequest,
@@ -41,6 +43,12 @@ export async function POST(
     return NextResponse.json({ error: 'invalid_role' }, { status: 400 });
   }
 
+  const callerLevel = ROLE_LEVEL[admin.role] ?? 0;
+  const targetLevel = ROLE_LEVEL[role ?? 'ta'] ?? 0;
+  if (targetLevel > callerLevel) {
+    return NextResponse.json({ error: 'cannot_assign_higher_role' }, { status: 403 });
+  }
+
   const db = getDB();
   try {
     await db.prepare(
@@ -74,6 +82,16 @@ export async function DELETE(
   }
 
   const db = getDB();
+
+  // Prevent deleting the last owner
+  const target = await db.prepare('SELECT role FROM course_admins WHERE course_id = ? AND email = ?').bind(courseId, email).first<{ role: string }>();
+  if (target?.role === 'owner') {
+    const ownerCount = await db.prepare('SELECT COUNT(*) as cnt FROM course_admins WHERE course_id = ? AND role = ?').bind(courseId, 'owner').first<{ cnt: number }>();
+    if ((ownerCount?.cnt ?? 0) <= 1) {
+      return NextResponse.json({ error: 'cannot_delete_last_owner' }, { status: 400 });
+    }
+  }
+
   await db.prepare(
     'DELETE FROM course_admins WHERE course_id = ? AND email = ?'
   ).bind(courseId, email).run();

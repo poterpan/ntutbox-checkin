@@ -37,13 +37,15 @@ export async function DELETE(req: NextRequest) {
 
   const db = getDB();
 
-  // Delete in order: attendance → sessions → nonce_log → course_admins → enrolled_students → courses
-  await db.prepare('DELETE FROM attendance WHERE course_id = ?').bind(id).run();
-  await db.prepare('DELETE FROM nonce_log WHERE session_id IN (SELECT id FROM sessions WHERE course_id = ?)').bind(id).run();
-  await db.prepare('DELETE FROM sessions WHERE course_id = ?').bind(id).run();
-  await db.prepare('DELETE FROM course_admins WHERE course_id = ?').bind(id).run();
-  await db.prepare('DELETE FROM enrolled_students WHERE course_id = ?').bind(id).run();
-  await db.prepare('DELETE FROM courses WHERE id = ?').bind(id).run();
+  // Atomic delete: attendance → nonce_log → sessions → course_admins → enrolled_students → courses
+  await db.batch([
+    db.prepare('DELETE FROM attendance WHERE course_id = ?').bind(id),
+    db.prepare('DELETE FROM nonce_log WHERE session_id IN (SELECT id FROM sessions WHERE course_id = ?)').bind(id),
+    db.prepare('DELETE FROM sessions WHERE course_id = ?').bind(id),
+    db.prepare('DELETE FROM course_admins WHERE course_id = ?').bind(id),
+    db.prepare('DELETE FROM enrolled_students WHERE course_id = ?').bind(id),
+    db.prepare('DELETE FROM courses WHERE id = ?').bind(id),
+  ]);
 
   return NextResponse.json({ ok: true });
 }
