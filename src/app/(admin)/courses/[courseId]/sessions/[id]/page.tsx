@@ -168,6 +168,18 @@ export default function SessionViewPage() {
     });
   };
 
+  const handleDeleteRecord = (recordId: number, email: string) => {
+    setDialog({
+      title: '刪除簽到紀錄',
+      message: `確定要刪除 ${email} 的簽到紀錄？此操作無法復原。`,
+      danger: true,
+      onConfirm: async () => {
+        await fetch(`/api/courses/${courseId}/attendance/${recordId}`, { method: 'DELETE' });
+        await fetchList();
+      },
+    });
+  };
+
   const statusLabel = (s: string) => {
     switch (s) { case 'on_time': return '準時'; case 'late': return '遲到'; case 'absent': return '缺席'; case 'manual': return '補簽'; default: return s; }
   };
@@ -308,6 +320,13 @@ export default function SessionViewPage() {
                         title="查看裝置資訊"
                       >
                         {expandedId === r.id ? '收起' : '裝置'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRecord(r.id, r.user_email)}
+                        className="btn btn-ghost btn-sm !min-h-0 !py-1 !px-2 text-xs text-danger-500 hover:bg-danger-50"
+                        title="刪除此紀錄"
+                      >
+                        刪除
                       </button>
                     </div>
                   </td>
