@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 type FpCross = { fingerprint_hash: string; account_count: number; accounts: string; total_signs: number };
 type IpBurst = { session_id: string; ip: string; cnt: number; users: string };
 type FastReaction = { id: string; user_email: string; session_id: string; scan_time: number; reaction_ms: number };
-type FpDetail = { id: string; user_email: string; session_id: string; fingerprint_hash: string; scan_time: number };
+type FpDetail = { id: string; user_email: string; session_id: string; fingerprint_hash: string; fingerprint_raw: string | null; scan_time: number };
 
 type AnalyticsData = {
   fp_cross_account?: FpCross[];
@@ -104,7 +104,17 @@ export default function AnalyticsPage() {
                 <tr key={r.id} className="border-t">
                   <td className="px-4 py-2">{r.user_email}</td>
                   <td className="px-4 py-2 font-mono text-xs">{r.session_id.slice(0, 8)}...</td>
-                  <td className="px-4 py-2 font-mono text-xs">{r.fingerprint_hash?.slice(0, 12)}...</td>
+                  <td className="px-4 py-2">
+                    <span className="font-mono text-xs">{r.fingerprint_hash?.slice(0, 12)}...</span>
+                    {r.fingerprint_raw && (
+                      <details className="mt-1">
+                        <summary className="text-xs text-blue-600 cursor-pointer hover:underline">展開 raw</summary>
+                        <pre className="text-xs bg-gray-50 p-2 mt-1 rounded overflow-x-auto max-h-40 overflow-y-auto">
+                          {JSON.stringify(JSON.parse(r.fingerprint_raw), null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </td>
                   <td className="px-4 py-2 space-x-2">
                     <button
                       onClick={() => markReviewed(r.id)}

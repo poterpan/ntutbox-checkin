@@ -54,7 +54,7 @@ export async function GET(
 
   const fpDetails = await db
     .prepare(`
-      SELECT id, user_email, session_id, fingerprint_hash, scan_time
+      SELECT id, user_email, session_id, fingerprint_hash, fingerprint_raw, scan_time
       FROM attendance
       WHERE course_id = ? AND fingerprint_hash IN (
         SELECT fingerprint_hash FROM attendance

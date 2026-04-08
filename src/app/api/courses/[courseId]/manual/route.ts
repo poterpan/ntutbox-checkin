@@ -17,6 +17,16 @@ export async function POST(
   }
 
   const db = getDB();
+
+  // Verify session belongs to this course and exists
+  const session = await db
+    .prepare('SELECT id, status FROM sessions WHERE id = ? AND course_id = ?')
+    .bind(session_id, courseId)
+    .first<{ id: string; status: string }>();
+  if (!session) {
+    return NextResponse.json({ error: 'invalid_session' }, { status: 400 });
+  }
+
   const now = Date.now();
 
   try {

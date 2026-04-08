@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack --port 9202",
     "build": "next build",
     "start": "next start",
+    "test": "vitest run",
     "lint": "next lint",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",

@@ -36,6 +36,11 @@ export async function POST(
     return NextResponse.json({ error: 'missing_email' }, { status: 400 });
   }
 
+  const validRoles = ['ta', 'instructor', 'owner'];
+  if (role && !validRoles.includes(role)) {
+    return NextResponse.json({ error: 'invalid_role' }, { status: 400 });
+  }
+
   const db = getDB();
   try {
     await db.prepare(
