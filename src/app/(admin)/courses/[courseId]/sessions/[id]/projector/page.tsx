@@ -13,7 +13,7 @@ export default function ProjectorPage() {
     const fetchQR = async () => {
       const res = await fetch(`/api/courses/${courseId}/sessions/${id}/qr`);
       if (!res.ok) return;
-      const { nonce } = await res.json();
+      const { nonce } = await res.json() as { nonce: string };
       const url = `${window.location.origin}/scan/${nonce}`;
       const dataUrl = await QRCode.toDataURL(url, {
         width: 400, margin: 2,

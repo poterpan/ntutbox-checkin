@@ -10,7 +10,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetch('/api/courses')
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ courses?: Course[] }>)
       .then((data) => { setCourses(data.courses ?? []); setLoading(false); });
   }, []);
 

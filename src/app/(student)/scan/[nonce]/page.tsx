@@ -23,7 +23,7 @@ export default function ScanPage() {
         });
 
         if (!res.ok) {
-          const data = await res.json();
+          const data = await res.json() as { error?: string };
           setErrorMsg(
             data.error === 'invalid_nonce'
               ? 'QR Code 已失效，請重新掃描投影幕上的 QR Code'
@@ -35,7 +35,7 @@ export default function ScanPage() {
           return;
         }
 
-        const { pending_id } = await res.json();
+        const { pending_id } = await res.json() as { pending_id: string };
         setState('signing_in');
 
         signIn('google', {

@@ -17,7 +17,7 @@ export default function SessionViewPage() {
   const fetchList = async () => {
     const res = await fetch(`/api/courses/${courseId}/sessions/${id}/list`);
     if (res.ok) {
-      const data = await res.json();
+      const data = await res.json() as { attendance: AttendanceRecord[]; not_signed: NotSigned[] };
       setAttendance(data.attendance);
       setNotSigned(data.not_signed);
     }

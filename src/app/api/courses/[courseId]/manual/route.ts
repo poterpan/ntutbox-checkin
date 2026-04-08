@@ -8,7 +8,9 @@ export async function POST(
 ) {
   const { courseId } = await params;
   const admin = await requireCourseAdmin(courseId);
-  const { session_id, user_email, user_name, reason } = await req.json();
+  const { session_id, user_email, user_name, reason } = await req.json() as {
+    session_id?: string; user_email?: string; user_name?: string; reason?: string;
+  };
 
   if (!session_id || !user_email) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });

@@ -19,7 +19,7 @@ export default function SuperCoursesPage() {
     if (res.ok) {
       setMessage(`課程 ${form.id} 建立成功`);
     } else {
-      const err = await res.json();
+      const err = await res.json() as { error?: string };
       setMessage(`失敗: ${err.error}`);
     }
   };

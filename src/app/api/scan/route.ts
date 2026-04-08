@@ -3,8 +3,7 @@ import { getKV, getDB } from '@/lib/cloudflare';
 import { validateNonce } from '@/lib/nonce';
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { nonce, fingerprint } = body;
+  const { nonce, fingerprint } = await req.json() as { nonce?: string; fingerprint?: unknown };
 
   if (!nonce) {
     return NextResponse.json({ error: 'missing_nonce' }, { status: 400 });

@@ -16,7 +16,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     fetch(`/api/courses/${courseId}/analytics`)
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ fp_cross_account?: FpCross[]; ip_burst?: IpBurst[]; fast_reaction?: FastReaction[] }>)
       .then((data) => {
         setFpCross(data.fp_cross_account ?? []);
         setIpBurst(data.ip_burst ?? []);

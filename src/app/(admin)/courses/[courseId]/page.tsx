@@ -13,7 +13,7 @@ export default function CourseControlPage() {
 
   useEffect(() => {
     fetch(`/api/courses/${courseId}/sessions/create`)
-      .then((r) => r.json())
+      .then((r) => r.json() as Promise<{ sessions?: Session[] }>)
       .then((data) => { setSessions(data.sessions ?? []); setLoading(false); });
   }, [courseId]);
 
@@ -21,13 +21,13 @@ export default function CourseControlPage() {
     setCreating(true);
     const res = await fetch(`/api/courses/${courseId}/sessions/create`, { method: 'POST' });
     if (res.ok) {
-      const data = await res.json();
+      const data = await res.json() as { session_id: string; class_date?: string; class_start_at: number };
       setSessions((prev) => [
         { id: data.session_id, class_date: data.class_date ?? '', status: 'open', class_start_at: data.class_start_at },
         ...prev,
       ]);
     } else {
-      const err = await res.json();
+      const err = await res.json() as { error?: string };
       alert(err.error === 'session_already_exists' ? '今日已有簽到場次' : '建立失敗');
     }
     setCreating(false);

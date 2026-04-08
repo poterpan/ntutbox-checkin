@@ -8,7 +8,7 @@ export async function POST(
 ) {
   const { courseId } = await params;
   await requireCourseAdmin(courseId);
-  const { students } = await req.json();
+  const { students } = await req.json() as { students: { email: string; student_id?: string; name?: string }[] };
   const db = getDB();
   const now = Date.now();
 

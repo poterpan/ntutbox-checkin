@@ -2,7 +2,7 @@
 
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 
-let fpPromise: Promise<ReturnType<typeof FingerprintJS.load>> | null = null;
+let fpPromise: ReturnType<typeof FingerprintJS.load> | null = null;
 
 export async function getFingerprint(): Promise<{
   visitorId: string;
