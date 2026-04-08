@@ -27,13 +27,13 @@ export async function GET(
 
   const nonce = crypto.randomUUID();
   const created_at = Date.now();
-  const expires_at = created_at + 45_000; // 45s TTL (15s buffer over 30s refresh)
+  const expires_at = created_at + 60_000; // 60s TTL (KV minimum), 30s buffer over 30s refresh
 
   const kv = getKV();
   await kv.put(
     `nonce:${nonce}`,
     JSON.stringify({ course_id: courseId, session_id: id, created_at, expires_at }),
-    { expirationTtl: 45 },
+    { expirationTtl: 60 },
   );
 
   await db.prepare(
