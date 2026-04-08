@@ -55,6 +55,7 @@
 	"vars": {
 		"GOOGLE_CLIENT_ID": "773938770965-ps22diji0ujrn798b69oagqchob83kug.apps.googleusercontent.com",
 		"NEXTAUTH_URL": "https://checkin.ntutbox.com",
-		"ALLOWED_EMAIL_DOMAIN": "ntut.org.tw"
+		"ALLOWED_EMAIL_DOMAIN": "ntut.org.tw",
+		"AUTH_TRUST_HOST": "true"
 	}
 }
