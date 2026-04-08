@@ -54,7 +54,9 @@ export default function CourseControlPage() {
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
   const todaySession = sessions.find((s) => s.class_date === today);
-  const pastSessions = sessions.filter((s) => s !== todaySession);
+  // Only exclude today's OPEN session from list (it's in the hero card already)
+  const todayOpenSession = todaySession?.status === 'open' ? todaySession : null;
+  const listSessions = sessions.filter((s) => s !== todayOpenSession);
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><div className="animate-pulse text-text-muted">載入中...</div></div>;
@@ -153,11 +155,11 @@ export default function CourseControlPage() {
       {/* All sessions */}
       <div>
         <h2 className="text-lg font-semibold text-text-primary mb-3">所有場次</h2>
-        {pastSessions.length === 0 ? (
+        {listSessions.length === 0 ? (
           <div className="card p-8 text-center text-text-muted">尚無簽到紀錄</div>
         ) : (
           <div className="space-y-2">
-            {pastSessions.map((s) => (
+            {listSessions.map((s) => (
               <a key={s.id} href={`/courses/${courseId}/sessions/${s.id}`}
                 className="card px-4 py-3 flex items-center justify-between hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3">
