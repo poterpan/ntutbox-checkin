@@ -33,8 +33,14 @@ export async function GET(
     .bind(courseId, id)
     .all();
 
+  const sessionInfo = await db
+    .prepare('SELECT status, qr_mode FROM sessions WHERE id = ? AND course_id = ?')
+    .bind(id, courseId)
+    .first<{ status: string; qr_mode: string }>();
+
   return NextResponse.json({
     attendance: attendance.results,
     not_signed: enrolled.results,
+    session: sessionInfo,
   });
 }
