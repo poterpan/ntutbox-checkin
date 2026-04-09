@@ -45,6 +45,12 @@ function ResultContent() {
   const params = useSearchParams();
   const { data: session } = useSession();
   const status = params.get('status') ?? 'unknown';
+  const scanTimeParam = params.get('t');
+  const scanTimeStr = scanTimeParam
+    ? new Date(Number(scanTimeParam)).toLocaleTimeString('zh-TW', {
+        timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit',
+      })
+    : null;
   const config = STATUS_CONFIG[status] ?? {
     icon: '?', title: '未知狀態', desc: '發生未預期的錯誤',
     next: '請聯繫助教', cardClass: 'result-card-muted', iconBg: 'bg-text-muted',
@@ -59,13 +65,21 @@ function ResultContent() {
         <h1 className="text-xl font-bold mb-1">{config.title}</h1>
         <p className="text-text-secondary text-sm mb-4">{config.desc}</p>
 
-        {session?.user?.name && (
-          <div className="bg-white/60 rounded-lg px-3 py-2 mb-4 inline-block">
-            <p className="text-xs text-text-muted">登入帳號</p>
-            <p className="text-sm font-medium text-text-primary">{session.user.name}</p>
-            <p className="text-xs text-text-muted">{session.user.email}</p>
-          </div>
-        )}
+        <div className="bg-white/60 rounded-lg px-3 py-2 mb-4 inline-block">
+          {scanTimeStr && (
+            <>
+              <p className="text-xs text-text-muted">掃碼時間</p>
+              <p className="text-sm font-mono font-medium text-text-primary mb-1">{scanTimeStr}</p>
+            </>
+          )}
+          {session?.user?.name && (
+            <>
+              <p className="text-xs text-text-muted">登入帳號</p>
+              <p className="text-sm font-medium text-text-primary">{session.user.name}</p>
+              <p className="text-xs text-text-muted">{session.user.email}</p>
+            </>
+          )}
+        </div>
 
         <p className="text-text-muted text-xs">{config.next}</p>
 

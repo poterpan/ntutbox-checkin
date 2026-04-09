@@ -12,6 +12,7 @@ export default function ScanPage() {
   const { status: authStatus } = useSession();
   const [state, setState] = useState<ScanState>('privacy');
   const [errorMsg, setErrorMsg] = useState('');
+  const [scanTimeStr, setScanTimeStr] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('privacy_accepted') === '1') {
@@ -30,8 +31,17 @@ export default function ScanPage() {
           body: JSON.stringify({ nonce, fingerprint: fp }),
         });
 
+        const formatTime = (ts: number) =>
+          new Date(ts).toLocaleTimeString('zh-TW', {
+            timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit',
+          });
+
+        // Record the moment we sent the request as fallback
+        const localTime = formatTime(Date.now());
+
         if (!res.ok) {
           const data = await res.json() as { error?: string };
+          setScanTimeStr(localTime);
           setErrorMsg(
             data.error === 'invalid_nonce'
               ? 'QR Code 已失效，請重新掃描投影幕上的 QR Code'
@@ -45,10 +55,11 @@ export default function ScanPage() {
           return;
         }
 
-        const { pending_id } = await res.json() as { pending_id: string };
+        const { pending_id, scan_time } = await res.json() as { pending_id: string; scan_time: number };
+        setScanTimeStr(formatTime(scan_time));
         setState('redirecting');
 
-        const checkinUrl = `/api/checkin?pid=${pending_id}`;
+        const checkinUrl = `/api/checkin?pid=${pending_id}&t=${scan_time}`;
         setTimeout(() => {
           if (authStatus === 'authenticated') {
             window.location.href = checkinUrl;
@@ -105,7 +116,13 @@ export default function ScanPage() {
         <div className="result-card result-card-danger mx-auto">
           <p className="text-4xl mb-3">✕</p>
           <h1 className="text-lg font-bold text-danger-600 mb-2">簽到失敗</h1>
-          <p className="text-text-secondary text-sm mb-6">{errorMsg}</p>
+          <p className="text-text-secondary text-sm mb-4">{errorMsg}</p>
+          {scanTimeStr && (
+            <div className="bg-white/60 rounded-lg px-3 py-2 mb-4 inline-block">
+              <p className="text-xs text-text-muted">掃碼時間</p>
+              <p className="text-sm font-mono font-medium text-text-primary">{scanTimeStr}</p>
+            </div>
+          )}
           <p className="text-text-muted text-xs">請重新掃描投影幕上的 QR Code</p>
         </div>
       </div>
@@ -135,10 +152,12 @@ export default function ScanPage() {
               {state === 'scanning' ? '2' : '✓'}
             </span>
             <div>
-              <p className={`font-medium ${state === 'scanning' ? 'text-text-primary' : 'text-text-primary'}`}>
+              <p className="font-medium text-text-primary">
                 {state === 'scanning' ? '正在記錄簽到時間...' : '時間已記錄'}
               </p>
-              <p className="text-xs text-text-muted">以此刻時間作為簽到依據</p>
+              <p className="text-xs text-text-muted">
+                {scanTimeStr ? `掃碼時間：${scanTimeStr}` : '以此刻時間作為簽到依據'}
+              </p>
             </div>
           </div>
           {/* Step 3 */}

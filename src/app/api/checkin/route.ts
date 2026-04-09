@@ -58,8 +58,10 @@ export async function GET(req: NextRequest) {
     sessionRow.late_cutoff_at,
   );
 
+  const t = pending.scan_time;
+
   if (status === 'too_early') {
-    return NextResponse.redirect(new URL('/result?status=too_early', req.url));
+    return NextResponse.redirect(new URL(`/result?status=too_early&t=${t}`, req.url));
   }
 
   const reaction_ms = pending.scan_time - pending.nonce_created_at;
@@ -90,10 +92,10 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     const msg = String((err as Error)?.message ?? err);
     if (msg.includes('UNIQUE')) {
-      return NextResponse.redirect(new URL('/result?status=already_signed', req.url));
+      return NextResponse.redirect(new URL(`/result?status=already_signed&t=${t}`, req.url));
     }
     throw err;
   }
 
-  return NextResponse.redirect(new URL(`/result?status=${status}`, req.url));
+  return NextResponse.redirect(new URL(`/result?status=${status}&t=${t}`, req.url));
 }
