@@ -1,10 +1,27 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getDB } from "@/lib/cloudflare";
+
+async function isAdmin(email: string): Promise<boolean> {
+	const db = getDB();
+	const superAdmin = await db
+		.prepare("SELECT email FROM super_admins WHERE email = ?")
+		.bind(email)
+		.first();
+	if (superAdmin) return true;
+
+	const courseAdmin = await db
+		.prepare("SELECT email FROM course_admins WHERE email = ? LIMIT 1")
+		.bind(email)
+		.first();
+	return !!courseAdmin;
+}
 
 export default async function HomePage() {
 	const session = await auth();
 	if (session?.user?.email) {
-		redirect("/dashboard");
+		const admin = await isAdmin(session.user.email);
+		redirect(admin ? "/dashboard" : "/my-records");
 	}
 
 	return (
@@ -18,10 +35,12 @@ export default async function HomePage() {
 				<h1 className="text-2xl font-bold text-text-primary mb-2">NTUT 課堂簽到</h1>
 				<p className="text-text-secondary mb-8">請用手機掃描教室投影幕上的 QR Code 完成簽到</p>
 
-				<div className="border-t border-border pt-6">
-					<p className="text-text-muted text-sm mb-3">教師與助教</p>
-					<a href="/dashboard" className="btn btn-secondary">
-						進入管理後台
+				<div className="border-t border-border pt-6 space-y-3">
+					<a href="/my-records" className="btn btn-primary w-full block">
+						查看我的簽到紀錄
+					</a>
+					<a href="/dashboard" className="btn btn-secondary w-full block">
+						教師 / 助教管理後台
 					</a>
 				</div>
 			</div>

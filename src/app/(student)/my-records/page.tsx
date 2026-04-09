@@ -1,8 +1,7 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 
 interface AttendanceRecord {
   status: string;
@@ -41,7 +40,11 @@ export default function MyRecordsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (authStatus !== 'authenticated') return;
+    if (authStatus === 'loading') return;
+    if (authStatus !== 'authenticated') {
+      signIn('google');
+      return;
+    }
 
     fetch('/api/my-records')
       .then(async (res) => {
@@ -53,18 +56,10 @@ export default function MyRecordsPage() {
       .finally(() => setLoading(false));
   }, [authStatus]);
 
-  if (authStatus === 'loading' || loading) {
+  if (authStatus !== 'authenticated' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dim">
         <p className="text-text-muted">載入中...</p>
-      </div>
-    );
-  }
-
-  if (authStatus !== 'authenticated') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-dim">
-        <p className="text-text-muted">請先登入</p>
       </div>
     );
   }
@@ -120,12 +115,6 @@ export default function MyRecordsPage() {
           </div>
         )}
 
-        {/* Back link */}
-        <div className="mt-6 text-center">
-          <Link href="/" className="text-xs text-text-muted hover:text-text-secondary">
-            返回首頁
-          </Link>
-        </div>
       </div>
     </div>
   );

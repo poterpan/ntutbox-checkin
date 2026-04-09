@@ -4,7 +4,7 @@ import Google from 'next-auth/providers/google';
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: 'jwt',
-    maxAge: 60 * 60 * 8, // 8 hours
+    maxAge: 60 * 60 * 24 * 30, // 30 days
   },
   providers: [
     Google({
@@ -27,6 +27,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.email = user.email;
         token.name = user.name;
       }
+      // Refresh token: reset expiry on every visit
+      token.iat = Math.floor(Date.now() / 1000);
+      token.exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
       return token;
     },
     async session({ session, token }) {
