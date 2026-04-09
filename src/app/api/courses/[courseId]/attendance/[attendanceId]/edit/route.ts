@@ -10,7 +10,7 @@ export async function PATCH(
   const admin = await requireCourseAdmin(courseId);
   const { status } = await req.json() as { status: string };
 
-  const validStatuses = ['on_time', 'late', 'absent', 'manual'];
+  const validStatuses = ['on_time', 'late', 'absent', 'leave', 'manual'];
   if (!status || !validStatuses.includes(status)) {
     return NextResponse.json({ error: 'invalid_status' }, { status: 400 });
   }

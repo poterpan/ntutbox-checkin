@@ -8,9 +8,10 @@ export async function POST(
 ) {
   const { courseId } = await params;
   const admin = await requireCourseAdmin(courseId);
-  const { session_id, user_email, user_name, reason } = await req.json() as {
-    session_id?: string; user_email?: string; user_name?: string; reason?: string;
+  const { session_id, user_email, user_name, reason, status: reqStatus } = await req.json() as {
+    session_id?: string; user_email?: string; user_name?: string; reason?: string; status?: string;
   };
+  const manualStatus = reqStatus === 'leave' ? 'leave' : 'manual';
 
   if (!session_id || !user_email) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
@@ -40,10 +41,10 @@ export async function POST(
         (session_id, course_id, user_email, user_name,
          scan_time, login_time, status,
          is_manual, manual_reason, manual_by, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, 'manual', 1, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
     `).bind(
       session_id, courseId, user_email, user_name ?? null,
-      now, now, reason ?? null, admin.email, now,
+      now, now, manualStatus, reason ?? null, admin.email, now,
     ).run();
   } catch (err: unknown) {
     const msg = String((err as Error)?.message ?? err);

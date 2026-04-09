@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireCourseAdmin } from '@/lib/permissions';
 import { getDB } from '@/lib/cloudflare';
 
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ courseId: string }> },
+) {
+  const { courseId } = await params;
+  await requireCourseAdmin(courseId);
+  const db = getDB();
+  const rows = await db
+    .prepare('SELECT email, student_id, name, added_at FROM enrolled_students WHERE course_id = ? ORDER BY student_id')
+    .bind(courseId)
+    .all();
+  return NextResponse.json({ students: rows.results });
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ courseId: string }> },

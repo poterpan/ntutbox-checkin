@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Suspense } from 'react';
+import Link from 'next/link';
 
 const STATUS_CONFIG: Record<string, {
   icon: string; title: string; desc: string; next: string;
@@ -33,6 +34,11 @@ const STATUS_CONFIG: Record<string, {
     next: '無需重複簽到，可以關閉此頁面',
     cardClass: 'result-card-muted', iconBg: 'bg-text-muted',
   },
+  leave: {
+    icon: '📋', title: '請假', desc: '本堂課已核准請假',
+    next: '可以關閉此頁面了',
+    cardClass: 'result-card-info', iconBg: 'bg-info-500',
+  },
 };
 
 function ResultContent() {
@@ -62,6 +68,13 @@ function ResultContent() {
         )}
 
         <p className="text-text-muted text-xs">{config.next}</p>
+
+        <Link
+          href="/my-records"
+          className="inline-block mt-4 text-xs text-brand-500 hover:text-brand-600 underline underline-offset-2"
+        >
+          查看我的簽到紀錄
+        </Link>
       </div>
     </div>
   );

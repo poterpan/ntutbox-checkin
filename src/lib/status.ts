@@ -1,4 +1,4 @@
-export type AttendanceStatus = 'too_early' | 'on_time' | 'late' | 'absent';
+export type AttendanceStatus = 'too_early' | 'on_time' | 'late' | 'absent' | 'leave';
 
 /**
  * Pure function: compares scan_time against session time boundaries.

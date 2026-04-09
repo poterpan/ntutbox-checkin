@@ -21,17 +21,16 @@ export async function GET(
     .bind(id, courseId)
     .all();
 
-  const enrolled = await db
-    .prepare(`
-      SELECT es.email, es.student_id, es.name
-      FROM enrolled_students es
-      WHERE es.course_id = ?
-        AND es.email NOT IN (
-          SELECT user_email FROM attendance WHERE session_id = ?
-        )
-    `)
-    .bind(courseId, id)
-    .all();
+  const allEnrolled = await db
+    .prepare('SELECT email, student_id, name FROM enrolled_students WHERE course_id = ?')
+    .bind(courseId)
+    .all<{ email: string; student_id: string | null; name: string | null }>();
+
+  const enrolledEmails = new Set(allEnrolled.results.map((e) => e.email));
+  const signedEmails = new Set(
+    attendance.results.map((a) => (a as unknown as { user_email: string }).user_email),
+  );
+  const notSigned = allEnrolled.results.filter((e) => !signedEmails.has(e.email));
 
   const sessionInfo = await db
     .prepare('SELECT status, qr_mode FROM sessions WHERE id = ? AND course_id = ?')
@@ -40,7 +39,9 @@ export async function GET(
 
   return NextResponse.json({
     attendance: attendance.results,
-    not_signed: enrolled.results,
+    not_signed: notSigned,
+    has_roster: allEnrolled.results.length > 0,
+    enrolled_emails: [...enrolledEmails],
     session: sessionInfo,
   });
 }

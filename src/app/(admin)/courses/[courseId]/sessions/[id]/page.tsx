@@ -23,9 +23,12 @@ export default function SessionViewPage() {
   const [manualEmail, setManualEmail] = useState('');
   const [manualName, setManualName] = useState('');
   const [manualReason, setManualReason] = useState('');
+  const [manualType, setManualType] = useState<'manual' | 'leave'>('manual');
   const [manualLoading, setManualLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingStatus, setEditingStatus] = useState<Record<number, boolean>>({});
+  const [hasRoster, setHasRoster] = useState(false);
+  const [enrolledEmails, setEnrolledEmails] = useState<Set<string>>(new Set());
   const [courseName, setCourseName] = useState<string>('');
   const [classDate, setClassDate] = useState<string>('');
   const [dialog, setDialog] = useState<{ title: string; message: string; danger?: boolean; onConfirm: () => void } | null>(null);
@@ -36,10 +39,14 @@ export default function SessionViewPage() {
       const data = await res.json() as {
         attendance: AttendanceRecord[];
         not_signed: NotSigned[];
+        has_roster: boolean;
+        enrolled_emails: string[];
         session: SessionInfo;
       };
       setAttendance(data.attendance);
       setNotSigned(data.not_signed);
+      setHasRoster(data.has_roster);
+      setEnrolledEmails(new Set(data.enrolled_emails));
       if (data.session) {
         setSessionStatus(data.session.status ?? 'active');
         setQrMode((data.session.qr_mode as 'dynamic' | 'static') ?? 'dynamic');
@@ -121,6 +128,7 @@ export default function SessionViewPage() {
           user_email: manualEmail.trim(),
           user_name: manualName.trim() || undefined,
           reason: manualReason.trim() || undefined,
+          status: manualType,
         }),
       });
       if (res.ok) {
@@ -128,6 +136,7 @@ export default function SessionViewPage() {
         setManualEmail('');
         setManualName('');
         setManualReason('');
+        setManualType('manual');
         fetchList();
       } else {
         const data = await res.json() as { error?: string };
@@ -143,7 +152,7 @@ export default function SessionViewPage() {
   };
 
   const handleStatusChange = (recordId: number, newStatus: string) => {
-    const labels: Record<string, string> = { on_time: '準時', late: '遲到', absent: '缺席', manual: '補簽' };
+    const labels: Record<string, string> = { on_time: '準時', late: '遲到', absent: '缺席', leave: '請假', manual: '補簽' };
     setDialog({
       title: '修改簽到狀態',
       message: `確定要將此紀錄改為「${labels[newStatus] ?? newStatus}」？`,
@@ -181,10 +190,10 @@ export default function SessionViewPage() {
   };
 
   const statusLabel = (s: string) => {
-    switch (s) { case 'on_time': return '準時'; case 'late': return '遲到'; case 'absent': return '缺席'; case 'manual': return '補簽'; default: return s; }
+    switch (s) { case 'on_time': return '準時'; case 'late': return '遲到'; case 'absent': return '缺席'; case 'leave': return '請假'; case 'manual': return '補簽'; default: return s; }
   };
   const statusBadge = (s: string) => {
-    switch (s) { case 'on_time': return 'badge badge-success'; case 'late': return 'badge badge-warning'; case 'absent': return 'badge badge-danger'; case 'manual': return 'badge badge-info'; default: return 'badge badge-muted'; }
+    switch (s) { case 'on_time': return 'badge badge-success'; case 'late': return 'badge badge-warning'; case 'absent': return 'badge badge-danger'; case 'leave': return 'badge badge-info'; case 'manual': return 'badge badge-info'; default: return 'badge badge-muted'; }
   };
 
   const isClosed = sessionStatus === 'closed';
@@ -194,6 +203,7 @@ export default function SessionViewPage() {
   const lateCount = attendance.filter((r) => r.status === 'late').length;
   const absentCount = attendance.filter((r) => r.status === 'absent').length;
   const manualCount = attendance.filter((r) => r.status === 'manual').length;
+  const leaveCount = attendance.filter((r) => r.status === 'leave').length;
   const total = attendance.length + notSigned.length;
 
   return (
@@ -219,11 +229,13 @@ export default function SessionViewPage() {
         </div>
 
         {/* Colored stat segments */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
-          <div className="bg-surface-muted rounded-lg px-3 py-2">
-            <p className="text-2xl font-bold text-text-primary">{total}</p>
-            <p className="text-xs text-text-muted">總人數</p>
-          </div>
+        <div className={`grid grid-cols-3 ${hasRoster ? 'sm:grid-cols-6' : 'sm:grid-cols-5'} gap-3 text-center`}>
+          {hasRoster && (
+            <div className="bg-surface-muted rounded-lg px-3 py-2">
+              <p className="text-2xl font-bold text-text-primary">{total}</p>
+              <p className="text-xs text-text-muted">總人數</p>
+            </div>
+          )}
           <div className="bg-success-50 rounded-lg px-3 py-2">
             <p className="text-2xl font-bold text-success-500">{onTimeCount}</p>
             <p className="text-xs text-text-muted">準時</p>
@@ -233,13 +245,19 @@ export default function SessionViewPage() {
             <p className="text-xs text-text-muted">遲到</p>
           </div>
           <div className="bg-info-50 rounded-lg px-3 py-2">
+            <p className="text-2xl font-bold text-info-500">{leaveCount}</p>
+            <p className="text-xs text-text-muted">請假</p>
+          </div>
+          <div className="bg-info-50 rounded-lg px-3 py-2">
             <p className="text-2xl font-bold text-info-500">{manualCount}</p>
             <p className="text-xs text-text-muted">補簽</p>
           </div>
-          <div className="bg-danger-50 rounded-lg px-3 py-2">
-            <p className="text-2xl font-bold text-danger-500">{notSigned.length}</p>
-            <p className="text-xs text-text-muted">未簽到</p>
-          </div>
+          {hasRoster && (
+            <div className="bg-danger-50 rounded-lg px-3 py-2">
+              <p className="text-2xl font-bold text-danger-500">{notSigned.length}</p>
+              <p className="text-xs text-text-muted">未簽到</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -294,7 +312,12 @@ export default function SessionViewPage() {
               <Fragment key={r.id}>
                 <tr className="border-b border-border last:border-0">
                   <td className="px-4 py-3 text-text-primary">{r.user_name ?? '-'}</td>
-                  <td className="px-4 py-3 text-text-muted">{r.user_email}</td>
+                  <td className="px-4 py-3 text-text-muted">
+                    {r.user_email}
+                    {hasRoster && !enrolledEmails.has(r.user_email) && (
+                      <span className="ml-1.5 text-[10px] font-medium text-warning-600 bg-warning-50 px-1.5 py-0.5 rounded">非名冊</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-text-muted">
                     {new Date(r.scan_time).toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei' })}
                   </td>
@@ -312,6 +335,7 @@ export default function SessionViewPage() {
                         <option value="on_time">準時</option>
                         <option value="late">遲到</option>
                         <option value="absent">缺席</option>
+                        <option value="leave">請假</option>
                         <option value="manual">補簽</option>
                       </select>
                       <button
@@ -385,8 +409,8 @@ export default function SessionViewPage() {
         </table>
       </div>
 
-      {/* Not signed section */}
-      {notSigned.length > 0 && (
+      {/* Not signed section — only when roster exists */}
+      {hasRoster && notSigned.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-lg font-semibold text-danger-500">未簽到</h2>
@@ -428,8 +452,29 @@ export default function SessionViewPage() {
       {showManualModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="card p-6 w-full max-w-md mx-4 shadow-lg">
-            <h2 className="text-lg font-bold text-text-primary mb-4">手動補簽</h2>
+            <h2 className="text-lg font-bold text-text-primary mb-4">
+              {manualType === 'leave' ? '登記請假' : '手動補簽'}
+            </h2>
             <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1">類型</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setManualType('manual')}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${manualType === 'manual' ? 'bg-brand-500 text-white border-brand-500' : 'bg-white text-text-secondary border-border hover:bg-surface-dim'}`}
+                  >
+                    補簽
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setManualType('leave')}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${manualType === 'leave' ? 'bg-info-500 text-white border-info-500' : 'bg-white text-text-secondary border-border hover:bg-surface-dim'}`}
+                  >
+                    請假
+                  </button>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1">
                   Email <span className="text-danger-500">*</span>
@@ -451,7 +496,9 @@ export default function SessionViewPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">補簽原因</label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">
+                  {manualType === 'leave' ? '請假事由' : '補簽原因'}
+                </label>
                 <input
                   type="text"
                   value={manualReason}
@@ -469,7 +516,7 @@ export default function SessionViewPage() {
                 disabled={manualLoading || !manualEmail.trim()}
                 className="btn btn-primary btn-sm"
               >
-                {manualLoading ? '送出中...' : '確認補簽'}
+                {manualLoading ? '送出中...' : manualType === 'leave' ? '確認請假' : '確認補簽'}
               </button>
             </div>
           </div>
