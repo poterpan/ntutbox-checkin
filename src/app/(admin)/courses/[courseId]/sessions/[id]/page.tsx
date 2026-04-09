@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/confirm-dialog';
 
 type AttendanceRecord = {
@@ -15,6 +15,7 @@ type SessionInfo = { status: string; qr_mode: string } | null;
 
 export default function SessionViewPage() {
   const { courseId, id } = useParams<{ courseId: string; id: string }>();
+  const router = useRouter();
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [notSigned, setNotSigned] = useState<NotSigned[]>([]);
   const [sessionStatus, setSessionStatus] = useState<string>('active');
@@ -99,6 +100,22 @@ export default function SessionViewPage() {
         const res = await fetch(`/api/courses/${courseId}/sessions/${id}/reopen`, { method: 'POST' });
         if (res.ok) {
           setSessionStatus('open');
+        }
+      },
+    });
+  };
+
+  const handleDeleteSession = () => {
+    setDialog({
+      title: '刪除整個點名紀錄',
+      message: `確定要刪除 ${classDate || id} 的點名紀錄？所有簽到資料將被永久刪除，此操作無法復原。`,
+      danger: true,
+      onConfirm: async () => {
+        const res = await fetch(`/api/courses/${courseId}/sessions/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          router.push(`/courses/${courseId}`);
+        } else {
+          alert('刪除失敗');
         }
       },
     });
@@ -198,12 +215,16 @@ export default function SessionViewPage() {
 
   const isClosed = sessionStatus === 'closed';
 
+  // Split attendance: absent goes into the "未簽到" section
+  const signedAttendance = attendance.filter((r) => r.status !== 'absent');
+  const absentAttendance = attendance.filter((r) => r.status === 'absent');
+
   // Stats
   const onTimeCount = attendance.filter((r) => r.status === 'on_time').length;
   const lateCount = attendance.filter((r) => r.status === 'late').length;
-  const absentCount = attendance.filter((r) => r.status === 'absent').length;
   const manualCount = attendance.filter((r) => r.status === 'manual').length;
   const leaveCount = attendance.filter((r) => r.status === 'leave').length;
+  const absentOrNotSigned = absentAttendance.length + notSigned.length;
   const total = attendance.length + notSigned.length;
 
   return (
@@ -252,12 +273,10 @@ export default function SessionViewPage() {
             <p className="text-2xl font-bold text-info-500">{manualCount}</p>
             <p className="text-xs text-text-muted">補簽</p>
           </div>
-          {hasRoster && (
-            <div className="bg-danger-50 rounded-lg px-3 py-2">
-              <p className="text-2xl font-bold text-danger-500">{notSigned.length}</p>
-              <p className="text-xs text-text-muted">未簽到</p>
-            </div>
-          )}
+          <div className="bg-danger-50 rounded-lg px-3 py-2">
+            <p className="text-2xl font-bold text-danger-500">{absentOrNotSigned}</p>
+            <p className="text-xs text-text-muted">缺席</p>
+          </div>
         </div>
       </div>
 
@@ -292,6 +311,9 @@ export default function SessionViewPage() {
               結束簽到
             </button>
           )}
+          <button onClick={handleDeleteSession} className="btn btn-ghost btn-sm text-danger-500 hover:bg-danger-50">
+            刪除
+          </button>
         </div>
       </div>
 
@@ -308,7 +330,7 @@ export default function SessionViewPage() {
             </tr>
           </thead>
           <tbody>
-            {attendance.map((r) => (
+            {signedAttendance.map((r) => (
               <Fragment key={r.id}>
                 <tr className="border-b border-border last:border-0">
                   <td className="px-4 py-3 text-text-primary">{r.user_name ?? '-'}</td>
@@ -400,7 +422,7 @@ export default function SessionViewPage() {
                 )}
               </Fragment>
             ))}
-            {attendance.length === 0 && (
+            {signedAttendance.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-text-muted">尚無簽到紀錄</td>
               </tr>
@@ -409,28 +431,51 @@ export default function SessionViewPage() {
         </table>
       </div>
 
-      {/* Not signed section — only when roster exists */}
-      {hasRoster && notSigned.length > 0 && (
+      {/* Absent + not signed section */}
+      {absentOrNotSigned > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-lg font-semibold text-danger-500">未簽到</h2>
-            <span className="badge badge-danger">{notSigned.length}</span>
+            <h2 className="text-lg font-semibold text-danger-500">缺席 / 未簽到</h2>
+            <span className="badge badge-danger">{absentOrNotSigned}</span>
           </div>
           <div className="card border-danger-100">
             <table className="w-full text-sm">
               <thead className="bg-danger-50 border-b border-danger-100">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium text-text-secondary">學號</th>
                   <th className="text-left px-4 py-3 font-medium text-text-secondary">姓名</th>
                   <th className="text-left px-4 py-3 font-medium text-text-secondary">Email</th>
+                  <th className="text-left px-4 py-3 font-medium text-text-secondary">狀態</th>
+                  <th className="text-left px-4 py-3 font-medium text-text-secondary">操作</th>
                 </tr>
               </thead>
               <tbody>
+                {absentAttendance.map((r) => (
+                  <tr key={r.user_email} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3 text-text-primary">{r.user_name ?? '-'}</td>
+                    <td className="px-4 py-3 text-text-muted">{r.user_email}</td>
+                    <td className="px-4 py-3"><span className="badge badge-danger">缺席</span></td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={r.status}
+                        disabled={editingStatus[r.id]}
+                        onChange={(e) => handleStatusChange(r.id, e.target.value)}
+                        className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
+                      >
+                        <option value="on_time">準時</option>
+                        <option value="late">遲到</option>
+                        <option value="absent">缺席</option>
+                        <option value="leave">請假</option>
+                        <option value="manual">補簽</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
                 {notSigned.map((s) => (
                   <tr key={s.email} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3 text-text-primary">{s.student_id ?? '-'}</td>
-                    <td className="px-4 py-3 text-text-primary">{s.name ?? '-'}</td>
+                    <td className="px-4 py-3 text-text-primary">{s.name ?? s.student_id ?? '-'}</td>
                     <td className="px-4 py-3 text-text-muted">{s.email}</td>
+                    <td className="px-4 py-3"><span className="badge badge-muted">未簽到</span></td>
+                    <td className="px-4 py-3 text-text-muted text-xs">—</td>
                   </tr>
                 ))}
               </tbody>
