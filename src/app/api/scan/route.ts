@@ -18,14 +18,19 @@ export async function POST(req: NextRequest) {
   const kv = getKV();
   await kv.delete(`nonce:${nonce}`);
 
-  // Check session is still open
+  // Check session is still open and not past class date
   const db = getDB();
   const session = await db
-    .prepare('SELECT status FROM sessions WHERE id = ?')
+    .prepare('SELECT status, class_date FROM sessions WHERE id = ?')
     .bind(nonceData.session_id)
-    .first<{ status: string }>();
+    .first<{ status: string; class_date: string }>();
   if (!session || session.status !== 'open') {
     return NextResponse.json({ error: 'session_closed' }, { status: 400 });
+  }
+
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
+  if (session.class_date < today) {
+    return NextResponse.json({ error: 'session_expired' }, { status: 400 });
   }
 
   // Create pending record in KV

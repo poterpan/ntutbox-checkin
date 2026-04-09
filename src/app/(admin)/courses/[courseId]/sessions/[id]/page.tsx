@@ -238,6 +238,13 @@ export default function SessionViewPage() {
         <span className="text-text-primary">{classDate || id}</span>
       </nav>
 
+      {/* Expired session warning */}
+      {classDate && !isClosed && classDate < new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' }) && (
+        <div className="bg-warning-50 border border-warning-300 rounded-lg px-4 py-3 mb-4 text-sm text-warning-700">
+          此場次已過上課日期（{classDate}），學生掃碼將無法簽到。建議關閉此場次。
+        </div>
+      )}
+
       {/* Stats summary bar */}
       <div className="card p-4 mb-6">
         <div className="flex items-center justify-between mb-3">

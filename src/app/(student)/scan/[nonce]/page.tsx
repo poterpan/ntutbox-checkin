@@ -37,6 +37,8 @@ export default function ScanPage() {
               ? 'QR Code 已失效，請重新掃描投影幕上的 QR Code'
               : data.error === 'session_closed'
               ? '本次簽到已結束'
+              : data.error === 'session_expired'
+              ? '此場次已過上課日期，無法簽到'
               : '發生錯誤，請重試'
           );
           setState('error');
