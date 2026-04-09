@@ -55,7 +55,7 @@ export async function GET(
   const csv = BOM + header + '\n' + csvRows.join('\n');
 
   const courseName = course?.name ?? courseId;
-  const filename = `attendance-${courseName}-全學期.csv`;
+  const filename = `attendance-${courseName.replace(/\s+/g, '_')}-全學期.csv`;
   const encodedFilename = encodeURIComponent(filename);
 
   return new NextResponse(csv, {

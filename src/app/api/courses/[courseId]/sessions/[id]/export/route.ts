@@ -53,7 +53,7 @@ export async function GET(
   const csv = BOM + header + '\n' + csvRows.join('\n');
   const courseName = session?.course_name ?? '';
   const classDate = session?.class_date ?? id;
-  const filename = `attendance-${courseName}-${classDate}.csv`;
+  const filename = `attendance-${courseName.replace(/\s+/g, '_')}-${classDate}.csv`;
   const encodedFilename = encodeURIComponent(filename);
 
   return new NextResponse(csv, {
