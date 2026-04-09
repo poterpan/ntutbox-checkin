@@ -6,7 +6,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await auth();
 
   if (!session?.user?.email) {
-    redirect('/api/auth/signin/google?callbackUrl=/dashboard');
+    redirect('/api/auth/signin?callbackUrl=/dashboard');
   }
 
   const domain = process.env.ALLOWED_EMAIL_DOMAIN ?? 'ntut.org.tw';
