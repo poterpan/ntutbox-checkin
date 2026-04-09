@@ -33,9 +33,9 @@ export async function GET(
     .all();
 
   const session = await db
-    .prepare('SELECT class_date FROM sessions WHERE id = ?')
+    .prepare('SELECT s.class_date, c.name as course_name FROM sessions s INNER JOIN courses c ON s.course_id = c.id WHERE s.id = ?')
     .bind(id)
-    .first<{ class_date: string }>();
+    .first<{ class_date: string; course_name: string }>();
 
   const BOM = '\uFEFF';
   const header = ['"學號"', '"姓名"', '"Email"', '"掃碼時間"', '"登入時間"', '"狀態"', '"是否手動"', '"備註"', '"IP"', '"反應時間ms"'].join(',');
@@ -51,12 +51,15 @@ export async function GET(
   });
 
   const csv = BOM + header + '\n' + csvRows.join('\n');
-  const filename = `attendance-${session?.class_date ?? id}.csv`;
+  const courseName = session?.course_name ?? '';
+  const classDate = session?.class_date ?? id;
+  const filename = `attendance-${courseName}-${classDate}.csv`;
+  const encodedFilename = encodeURIComponent(filename);
 
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `attachment; filename="${classDate}.csv"; filename*=UTF-8''${encodedFilename}`,
     },
   });
 }

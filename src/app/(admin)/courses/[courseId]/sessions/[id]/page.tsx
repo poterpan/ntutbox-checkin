@@ -359,6 +359,7 @@ export default function SessionViewPage() {
                   </td>
                   <td className="px-4 py-3 text-text-muted">
                     {new Date(r.scan_time).toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei' })}
+                    {r.is_manual ? <span className="ml-1.5 text-[10px] font-medium text-info-500 bg-info-50 px-1.5 py-0.5 rounded">手動</span> : null}
                   </td>
                   <td className="px-4 py-3">
                     <span className={statusBadge(r.status)}>{statusLabel(r.status)}</span>
@@ -470,7 +471,12 @@ export default function SessionViewPage() {
                   <tr key={r.user_email} className="border-b border-border last:border-0">
                     <td className="px-4 py-3 text-text-primary">{r.user_name ?? '-'}</td>
                     <td className="px-4 py-3 text-text-muted">{r.user_email}</td>
-                    <td className="px-4 py-3"><span className="badge badge-danger">缺席</span></td>
+                    <td className="px-4 py-3">
+                      <span className="badge badge-danger">缺席</span>
+                      <span className="ml-1.5 text-xs text-text-muted">
+                        掃碼 {new Date(r.scan_time).toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei' })}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <select
                         value={r.status}

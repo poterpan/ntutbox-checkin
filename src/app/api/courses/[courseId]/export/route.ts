@@ -18,6 +18,11 @@ export async function GET(
   await requireCourseAdmin(courseId);
   const db = getDB();
 
+  const course = await db
+    .prepare('SELECT name FROM courses WHERE id = ?')
+    .bind(courseId)
+    .first<{ name: string }>();
+
   const rows = await db
     .prepare(`
       SELECT a.user_email, a.user_name, a.scan_time, a.login_time, a.status,
@@ -49,10 +54,14 @@ export async function GET(
 
   const csv = BOM + header + '\n' + csvRows.join('\n');
 
+  const courseName = course?.name ?? courseId;
+  const filename = `attendance-${courseName}-全學期.csv`;
+  const encodedFilename = encodeURIComponent(filename);
+
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="attendance-semester-${courseId}.csv"`,
+      'Content-Disposition': `attachment; filename="attendance-semester.csv"; filename*=UTF-8''${encodedFilename}`,
     },
   });
 }
