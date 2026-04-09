@@ -290,10 +290,14 @@ export default function SessionViewPage() {
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         {/* Primary actions */}
-        <a href={`/courses/${courseId}/sessions/${id}/projector`} target="_blank"
-          className="btn btn-primary btn-sm">
-          投影頁
-        </a>
+        {isClosed ? (
+          <span className="btn btn-primary btn-sm opacity-50 pointer-events-none">投影頁</span>
+        ) : (
+          <a href={`/courses/${courseId}/sessions/${id}/projector`} target="_blank"
+            className="btn btn-primary btn-sm">
+            投影頁
+          </a>
+        )}
         <button onClick={() => setShowManualModal(true)} className="btn btn-primary btn-sm">
           手動補簽
         </button>
@@ -306,6 +310,12 @@ export default function SessionViewPage() {
         <button onClick={handleToggleQrMode} disabled={isClosed} className="btn btn-secondary btn-sm">
           {qrMode === 'dynamic' ? '切換靜態 QR' : '切換動態 QR'}
         </button>
+        {!isClosed && qrMode === 'static' && (
+          <a href={`/courses/${courseId}/sessions/${id}/projector`} target="_blank"
+            className="btn btn-secondary btn-sm">
+            列印 QR Code
+          </a>
+        )}
 
         {/* Danger / reopen action — right aligned */}
         <div className="ml-auto flex items-center gap-2">

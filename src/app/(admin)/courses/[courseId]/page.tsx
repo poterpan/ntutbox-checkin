@@ -18,6 +18,8 @@ export default function CourseControlPage() {
   const [course, setCourse] = useState<CourseInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
 
   useEffect(() => {
     fetch(`/api/courses/${courseId}/sessions/create`)
@@ -31,22 +33,27 @@ export default function CourseControlPage() {
       });
   }, [courseId]);
 
-  const createSession = async () => {
+  const createSession = async (date?: string) => {
     setCreating(true);
-    const res = await fetch(`/api/courses/${courseId}/sessions/create`, { method: 'POST' });
+    const res = await fetch(`/api/courses/${courseId}/sessions/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(date ? { date } : {}),
+    });
     if (res.ok) {
       const data = await res.json() as { session_id: string; class_date?: string; class_start_at: number };
       setSessions((prev) => [
         { id: data.session_id, class_date: data.class_date ?? '', status: 'open', class_start_at: data.class_start_at },
         ...prev,
       ]);
+      setShowDatePicker(false);
+      setSelectedDate('');
     } else {
       const err = await res.json() as { error?: string };
-      if (err.error === 'session_already_exists' && todaySession) {
-        // Navigate to existing today session
+      if (err.error === 'session_already_exists' && !date && todaySession) {
         window.location.href = `/courses/${courseId}/sessions/${todaySession.id}`;
       } else {
-        alert(err.error === 'session_already_exists' ? '今日已有簽到場次' : '建立失敗');
+        alert(err.error === 'session_already_exists' ? '該日期已有簽到場次' : '建立失敗');
       }
     }
     setCreating(false);
@@ -125,7 +132,7 @@ export default function CourseControlPage() {
               <span className="badge badge-warning">未開啟</span>
               <span className="text-sm text-text-primary font-medium">今天還沒開啟簽到</span>
             </div>
-            <button onClick={createSession} disabled={creating} className="btn btn-primary btn-sm">
+            <button onClick={() => createSession()} disabled={creating} className="btn btn-primary btn-sm">
               {creating ? '建立中...' : '開啟今日簽到'}
             </button>
           </div>
@@ -154,7 +161,35 @@ export default function CourseControlPage() {
 
       {/* All sessions */}
       <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-3">所有場次</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold text-text-primary">所有場次</h2>
+          <button onClick={() => setShowDatePicker(true)} className="btn btn-secondary btn-sm">
+            預建場次
+          </button>
+        </div>
+
+        {showDatePicker && (
+          <div className="card p-4 mb-4 flex items-center gap-3 flex-wrap">
+            <label className="text-sm text-text-secondary">選擇日期：</label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              min={today}
+              className="border border-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <button
+              onClick={() => createSession(selectedDate)}
+              disabled={creating || !selectedDate}
+              className="btn btn-primary btn-sm"
+            >
+              {creating ? '建立中...' : '建立'}
+            </button>
+            <button onClick={() => { setShowDatePicker(false); setSelectedDate(''); }} className="btn btn-ghost btn-sm">
+              取消
+            </button>
+          </div>
+        )}
         {listSessions.length === 0 ? (
           <div className="card p-8 text-center text-text-muted">尚無簽到紀錄</div>
         ) : (

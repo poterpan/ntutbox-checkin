@@ -25,8 +25,10 @@ export async function POST(
     return NextResponse.json({ error: 'course_not_found' }, { status: 404 });
   }
 
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-CA', { timeZone: course.timezone });
+  const body = await req.json().catch(() => ({})) as { date?: string };
+  const dateStr = body.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date)
+    ? body.date
+    : new Date().toLocaleDateString('en-CA', { timeZone: course.timezone });
 
   const times = computeSessionTimes(
     dateStr,

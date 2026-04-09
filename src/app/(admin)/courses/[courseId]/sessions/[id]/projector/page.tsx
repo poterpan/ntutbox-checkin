@@ -90,13 +90,14 @@ export default function ProjectorPage() {
 
     const style = doc.createElement('style');
     style.textContent = [
+      '@page{margin:0}',
       'body{display:flex;flex-direction:column;align-items:center;justify-content:center;',
-      'min-height:100vh;margin:0;font-family:sans-serif;padding:2rem}',
+      'height:100vh;margin:0;font-family:sans-serif;padding:2rem;box-sizing:border-box}',
       '.course{font-size:2.5rem;font-weight:bold;margin-bottom:0.25rem}',
-      '.date{font-size:1.25rem;color:#666;margin-bottom:2rem}',
-      '.subtitle{color:#666;margin-bottom:2rem;font-size:1.1rem}',
-      'img{width:400px;height:400px}',
-      '.note{color:#999;margin-top:2rem;font-size:0.875rem}',
+      '.date{font-size:1.25rem;color:#666;margin-bottom:1.5rem}',
+      '.subtitle{color:#666;margin-bottom:1.5rem;font-size:1.1rem}',
+      'img{width:350px;height:350px}',
+      '.note{color:#999;margin-top:1.5rem;font-size:0.875rem}',
     ].join('');
     head.appendChild(style);
     html.appendChild(head);
