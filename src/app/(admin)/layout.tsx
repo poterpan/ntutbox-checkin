@@ -1,12 +1,13 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import LoginScreen from './LoginScreen';
 import LogoutButton from './LogoutButton';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
 
   if (!session?.user?.email) {
-    redirect('/api/auth/signin?callbackUrl=/dashboard');
+    return <LoginScreen />;
   }
 
   const domain = process.env.ALLOWED_EMAIL_DOMAIN ?? 'ntut.org.tw';

@@ -22,6 +22,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'email required' }, { status: 400 });
   }
 
+  const isSecure = req.nextUrl.protocol === 'https:';
+  const cookieName = isSecure
+    ? '__Secure-authjs.session-token'
+    : 'authjs.session-token';
+
   const token = await encode({
     token: {
       email,
@@ -31,13 +36,13 @@ export async function GET(req: NextRequest) {
       exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
     },
     secret: process.env.NEXTAUTH_SECRET!,
-    salt: 'authjs.session-token',
+    salt: cookieName,
   });
 
   const cookieStore = await cookies();
-  cookieStore.set('authjs.session-token', token, {
+  cookieStore.set(cookieName, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     path: '/',
     maxAge: 60 * 60 * 24 * 30,
