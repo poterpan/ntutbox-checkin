@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import { getFingerprint } from '@/lib/fingerprint';
 
@@ -9,6 +9,7 @@ type ScanState = 'privacy' | 'scanning' | 'redirecting' | 'error';
 
 export default function ScanPage() {
   const { nonce } = useParams<{ nonce: string }>();
+  const { status: authStatus } = useSession();
   const [state, setState] = useState<ScanState>('privacy');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -45,9 +46,13 @@ export default function ScanPage() {
         const { pending_id } = await res.json() as { pending_id: string };
         setState('redirecting');
 
-        // Small delay so user sees the step change
+        const checkinUrl = `/api/checkin?pid=${pending_id}`;
         setTimeout(() => {
-          signIn('google', { callbackUrl: `/api/checkin?pid=${pending_id}` });
+          if (authStatus === 'authenticated') {
+            window.location.href = checkinUrl;
+          } else {
+            signIn('google', { callbackUrl: checkinUrl });
+          }
         }, 600);
       } catch {
         setErrorMsg('網路錯誤，請確認網路連線後重試');
@@ -143,9 +148,9 @@ export default function ScanPage() {
             }`}>3</span>
             <div>
               <p className={`font-medium ${state === 'redirecting' ? 'text-text-primary' : 'text-text-muted'}`}>
-                跳轉 Google 登入
+                {authStatus === 'authenticated' ? '完成簽到' : '跳轉 Google 登入'}
               </p>
-              {state === 'redirecting' && (
+              {state === 'redirecting' && authStatus !== 'authenticated' && (
                 <p className="text-xs text-warning-500 font-medium">請選擇學校帳號 (@ntut.org.tw)</p>
               )}
             </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 
 interface AttendanceRecord {
@@ -40,11 +40,7 @@ export default function MyRecordsPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (authStatus === 'loading') return;
-    if (authStatus !== 'authenticated') {
-      signIn('google');
-      return;
-    }
+    if (authStatus !== 'authenticated') return;
 
     fetch('/api/my-records')
       .then(async (res) => {
@@ -56,7 +52,32 @@ export default function MyRecordsPage() {
       .finally(() => setLoading(false));
   }, [authStatus]);
 
-  if (authStatus !== 'authenticated' || loading) {
+  if (authStatus === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dim">
+        <p className="text-text-muted">載入中...</p>
+      </div>
+    );
+  }
+
+  if (authStatus !== 'authenticated') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dim">
+        <div className="text-center">
+          <h1 className="text-lg font-bold text-text-primary mb-2">NTUT 課堂簽到</h1>
+          <p className="text-text-muted text-sm mb-6">請登入以查看簽到紀錄</p>
+          <button
+            onClick={() => signIn('google', undefined, { prompt: 'select_account' })}
+            className="btn btn-primary"
+          >
+            使用學校 Google 帳號登入
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dim">
         <p className="text-text-muted">載入中...</p>
@@ -68,9 +89,17 @@ export default function MyRecordsPage() {
     <div className="min-h-screen bg-surface-dim p-4">
       <div className="max-w-md mx-auto">
         {/* Header */}
-        <div className="mb-4">
-          <h1 className="text-lg font-bold text-text-primary">我的簽到紀錄</h1>
-          <p className="text-xs text-text-muted">{session?.user?.email}</p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-text-primary">我的簽到紀錄</h1>
+            <p className="text-xs text-text-muted">{session?.user?.email}</p>
+          </div>
+          <button
+            onClick={() => signOut({ callbackUrl: '/' })}
+            className="text-xs text-text-muted hover:text-danger-600 transition-colors"
+          >
+            登出
+          </button>
         </div>
 
         {error && (

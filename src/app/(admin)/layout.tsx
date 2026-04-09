@@ -1,11 +1,12 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import LogoutButton from './LogoutButton';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
 
   if (!session?.user?.email) {
-    redirect('/api/auth/signin?callbackUrl=/dashboard');
+    redirect('/api/auth/signin/google?callbackUrl=/dashboard');
   }
 
   const domain = process.env.ALLOWED_EMAIL_DOMAIN ?? 'ntut.org.tw';
@@ -20,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <a href="/dashboard" className="font-bold text-lg tracking-tight">NTUT 簽到管理</a>
           <div className="flex items-center gap-4">
             <span className="text-sm text-white/70">{session.user.name ?? session.user.email}</span>
-            <a href="/api/auth/signout?callbackUrl=/" className="text-sm text-white/50 hover:text-white/80 transition-colors">登出</a>
+            <LogoutButton />
           </div>
         </div>
       </nav>
