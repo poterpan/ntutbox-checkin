@@ -1,12 +1,19 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { Suspense } from 'react';
 
-const ERROR_CONFIG: Record<string, { message: string; action: string; actionUrl?: string }> = {
+const ERROR_CONFIG: Record<string, { message: string; action: string; needsRelogin?: boolean }> = {
   invalid_domain: {
-    message: '請使用 @ntut.org.tw 學校帳號登入',
-    action: '重新掃描 QR Code 並選擇正確帳號',
+    message: '你登入的帳號不是學校帳號，請點下方重新登入並選擇 @ntut.org.tw',
+    action: '重新登入並選擇學校帳號',
+    needsRelogin: true,
+  },
+  AccessDenied: {
+    message: '你登入的帳號不是學校帳號，請點下方重新登入並選擇 @ntut.org.tw',
+    action: '重新登入並選擇學校帳號',
+    needsRelogin: true,
   },
   missing_pid: {
     message: '簽到連結無效',
@@ -20,14 +27,31 @@ const ERROR_CONFIG: Record<string, { message: string; action: string; actionUrl?
     message: '找不到簽到場次',
     action: '請確認簽到是否已開放，或聯繫助教',
   },
+  session_closed: {
+    message: '本次簽到已結束',
+    action: '請聯繫助教處理',
+  },
 };
 
 function ErrorContent() {
   const params = useSearchParams();
-  const code = params.get('code') ?? 'unknown';
+  // NextAuth v5 error redirects use ?error=AccessDenied; existing routes use ?code=...
+  // Read both.
+  const code = params.get('error') ?? params.get('code') ?? 'unknown';
   const config = ERROR_CONFIG[code] ?? {
     message: '發生未知錯誤',
     action: '請聯繫助教處理',
+  };
+
+  const handleRelogin = () => {
+    const stored = typeof window !== 'undefined'
+      ? sessionStorage.getItem('last_checkin_url')
+      : null;
+    const callbackUrl = stored ?? '/dashboard';
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('last_checkin_url');
+    }
+    signIn('google', { callbackUrl }, { prompt: 'select_account' });
   };
 
   return (
@@ -38,10 +62,16 @@ function ErrorContent() {
         </div>
         <h1 className="text-xl font-bold text-danger-600 mb-2">出錯了</h1>
         <p className="text-text-secondary text-sm mb-6">{config.message}</p>
-        <div className="bg-white/60 rounded-lg px-4 py-3">
-          <p className="text-xs text-text-muted mb-1">建議操作</p>
-          <p className="text-sm text-text-primary font-medium">{config.action}</p>
-        </div>
+        {config.needsRelogin ? (
+          <button onClick={handleRelogin} className="btn btn-primary w-full">
+            {config.action}
+          </button>
+        ) : (
+          <div className="bg-white/60 rounded-lg px-4 py-3">
+            <p className="text-xs text-text-muted mb-1">建議操作</p>
+            <p className="text-sm text-text-primary font-medium">{config.action}</p>
+          </div>
+        )}
       </div>
     </div>
   );
