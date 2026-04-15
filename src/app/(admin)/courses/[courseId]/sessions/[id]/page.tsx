@@ -28,6 +28,7 @@ export default function SessionViewPage() {
   const [manualLoading, setManualLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingStatus, setEditingStatus] = useState<Record<number, boolean>>({});
+  const [quickActionLoading, setQuickActionLoading] = useState<Record<string, boolean>>({});
   const [hasRoster, setHasRoster] = useState(false);
   const [enrolledEmails, setEnrolledEmails] = useState<Set<string>>(new Set());
   const [courseName, setCourseName] = useState<string>('');
@@ -204,6 +205,45 @@ export default function SessionViewPage() {
         await fetchList();
       },
     });
+  };
+
+  const handleManualCheckIn = (s: NotSigned) => {
+    const displayName = s.name ?? s.student_id ?? s.email;
+    setDialog({
+      title: '手動打卡確認',
+      message: `確定要將 ${displayName} 標記為「準時」？`,
+      onConfirm: async () => {
+        setQuickActionLoading((prev) => ({ ...prev, [s.email]: true }));
+        try {
+          const res = await fetch(`/api/courses/${courseId}/manual`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              session_id: id,
+              user_email: s.email,
+              user_name: s.name ?? undefined,
+              status: 'on_time',
+            }),
+          });
+          if (res.ok) {
+            await fetchList();
+          } else {
+            const data = await res.json() as { error?: string };
+            alert('手動打卡失敗：' + (data.error ?? '未知錯誤'));
+          }
+        } finally {
+          setQuickActionLoading((prev) => ({ ...prev, [s.email]: false }));
+        }
+      },
+    });
+  };
+
+  const handleOpenLeaveModal = (s: NotSigned) => {
+    setManualEmail(s.email);
+    setManualName(s.name ?? '');
+    setManualReason('');
+    setManualType('leave');
+    setShowManualModal(true);
   };
 
   const statusLabel = (s: string) => {
@@ -493,14 +533,34 @@ export default function SessionViewPage() {
                     </td>
                   </tr>
                 ))}
-                {notSigned.map((s) => (
-                  <tr key={s.email} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3 text-text-primary">{s.name ?? s.student_id ?? '-'}</td>
-                    <td className="px-4 py-3 text-text-muted">{s.email}</td>
-                    <td className="px-4 py-3"><span className="badge badge-muted">未簽到</span></td>
-                    <td className="px-4 py-3 text-text-muted text-xs">—</td>
-                  </tr>
-                ))}
+                {notSigned.map((s) => {
+                  const loading = !!quickActionLoading[s.email];
+                  return (
+                    <tr key={s.email} className="border-b border-border last:border-0">
+                      <td className="px-4 py-3 text-text-primary">{s.name ?? s.student_id ?? '-'}</td>
+                      <td className="px-4 py-3 text-text-muted">{s.email}</td>
+                      <td className="px-4 py-3"><span className="badge badge-muted">未簽到</span></td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleManualCheckIn(s)}
+                            disabled={loading}
+                            className="btn btn-primary btn-sm disabled:opacity-50"
+                          >
+                            手動打卡
+                          </button>
+                          <button
+                            onClick={() => handleOpenLeaveModal(s)}
+                            disabled={loading}
+                            className="btn btn-secondary btn-sm disabled:opacity-50"
+                          >
+                            請假
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -11,7 +11,10 @@ export async function POST(
   const { session_id, user_email, user_name, reason, status: reqStatus } = await req.json() as {
     session_id?: string; user_email?: string; user_name?: string; reason?: string; status?: string;
   };
-  const manualStatus = reqStatus === 'leave' ? 'leave' : 'manual';
+  const allowedStatuses = ['on_time', 'late', 'leave', 'manual'] as const;
+  const manualStatus = (allowedStatuses as readonly string[]).includes(reqStatus ?? '')
+    ? (reqStatus as typeof allowedStatuses[number])
+    : 'manual';
 
   if (!session_id || !user_email) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
