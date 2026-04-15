@@ -41,7 +41,7 @@ function makeStmt(firstResult: unknown): DBStmt {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
 });
 
 describe('validateNonce (dynamic)', () => {

@@ -39,7 +39,7 @@ function makeStmt(firstResult: unknown) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   vi.setSystemTime(1_700_000_000_000);
   // crypto.randomUUID is native in Node 18+ test runtime — no mock needed.
 });
