@@ -1,16 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-type PendingRecord = {
-  course_id: string; session_id: string; nonce_created_at: number; scan_time: number;
-  fingerprint: unknown; ip: string | null; user_agent: string | null;
-};
-
 // In-memory fakes to simulate full flow
 const kvStore = new Map<string, unknown>();
 const kvTtls = new Map<string, number>();
 
 const kvMock = {
-  get: vi.fn(async (key: string, _type?: string) => kvStore.get(key) ?? null),
+  get: vi.fn(async (key: string) => kvStore.get(key) ?? null),
   put: vi.fn(async (key: string, value: string, opts?: { expirationTtl?: number }) => {
     kvStore.set(key, JSON.parse(value));
     if (opts?.expirationTtl) kvTtls.set(key, Date.now() + opts.expirationTtl * 1000);
