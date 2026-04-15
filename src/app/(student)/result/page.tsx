@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import Link from 'next/link';
 
 const STATUS_CONFIG: Record<string, {
@@ -43,6 +43,13 @@ const STATUS_CONFIG: Record<string, {
 
 function ResultContent() {
   const params = useSearchParams();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('last_checkin_url');
+    }
+  }, []);
+
   const { data: session } = useSession();
   const status = params.get('status') ?? 'unknown';
   const scanTimeParam = params.get('t');

@@ -37,8 +37,8 @@ export async function GET(
   );
 
   await db.prepare(
-    'INSERT INTO nonce_log (nonce, session_id, created_at) VALUES (?, ?, ?)',
-  ).bind(nonce, id, created_at).run();
+    'INSERT INTO nonce_log (nonce, session_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
+  ).bind(nonce, id, created_at, expires_at).run();
 
   return NextResponse.json({ nonce, mode: 'dynamic', expires_at, ...meta });
 }

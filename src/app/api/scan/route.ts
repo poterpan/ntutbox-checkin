@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid_nonce' }, { status: 400 });
   }
 
-  // Consume dynamic nonce (single-use). Static nonces are NOT consumed.
-  const kv = getKV();
-  await kv.delete(`nonce:${nonce}`);
+  // Dynamic nonces are NOT consumed (single-use) — multiple students may scan
+  // the same QR within its 30s display window. Per-student duplicate prevention
+  // is enforced by attendance.UNIQUE(session_id, user_email).
 
   // Check session is still open and not past class date
   const db = getDB();
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
   const pending_id = crypto.randomUUID();
   const scan_time = Date.now();
 
+  const kv = getKV();
   await kv.put(
     `pending:${pending_id}`,
     JSON.stringify({

@@ -1,27 +1,66 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import { getFingerprint } from '@/lib/fingerprint';
+import { detectInAppBrowser, type InAppBrowserType } from '@/lib/in-app-browser';
 
-type ScanState = 'privacy' | 'scanning' | 'redirecting' | 'error';
+type ScanState = 'in_app_browser' | 'privacy' | 'scanning' | 'redirecting' | 'error';
 
 export default function ScanPage() {
   const { nonce } = useParams<{ nonce: string }>();
   const { status: authStatus } = useSession();
   const [state, setState] = useState<ScanState>('privacy');
+  const [inAppType, setInAppType] = useState<InAppBrowserType>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [scanTimeStr, setScanTimeStr] = useState('');
+  const [copied, setCopied] = useState(false);
 
+  // Refs that survive re-renders without retriggering effects
+  const scanStartedRef = useRef(false);
+  const authStatusRef = useRef(authStatus);
+  useEffect(() => { authStatusRef.current = authStatus; }, [authStatus]);
+
+  // Initial detection: in-app browser takes priority over privacy_accepted shortcut
   useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('privacy_accepted') === '1') {
+    if (typeof window === 'undefined') return;
+    const ua = navigator.userAgent;
+    const type = detectInAppBrowser(ua);
+
+    if (type === 'line') {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('openExternalBrowser')) {
+        url.searchParams.set('openExternalBrowser', '1');
+        window.location.replace(url.toString());
+        return;
+      }
+      // openExternalBrowser=1 already set but still in LINE (rare old version)
+      setInAppType('line');
+      setState('in_app_browser');
+      return;
+    }
+
+    if (type === 'ig' || type === 'fb' || type === 'messenger') {
+      setInAppType(type);
+      setState('in_app_browser');
+      return;
+    }
+
+    // Regular browser: honor privacy_accepted shortcut
+    if (localStorage.getItem('privacy_accepted') === '1') {
       setState('scanning');
     }
   }, []);
 
   useEffect(() => {
     if (state !== 'scanning') return;
+    // Wait until session resolves; otherwise stale 'loading' would mis-route to OAuth.
+    if (authStatus === 'loading') return;
+    // Prevent the auth dep from retriggering the POST if useSession transitions after we start.
+    if (scanStartedRef.current) return;
+    scanStartedRef.current = true;
+
     (async () => {
       try {
         const fp = await getFingerprint();
@@ -36,7 +75,6 @@ export default function ScanPage() {
             timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit',
           });
 
-        // Record the moment we sent the request as fallback
         const localTime = formatTime(Date.now());
 
         if (!res.ok) {
@@ -60,11 +98,42 @@ export default function ScanPage() {
         setState('redirecting');
 
         const checkinUrl = `/api/checkin?pid=${pending_id}&t=${scan_time}`;
+
+        // Read latest auth state after awaits (closure's `authStatus` is stale).
+        const authAfterScan = authStatusRef.current;
+
+        // Send pre-OAuth beacon before redirecting to signIn (only when OAuth will happen)
+        if (authAfterScan !== 'authenticated') {
+          try {
+            const beaconBody = JSON.stringify({
+              phase: 'pre_oauth_signin',
+              ua: navigator.userAgent.slice(0, 200),
+              nonce_prefix: nonce.slice(0, 8),
+              pending_id,
+              auth_status: authAfterScan,
+              in_app_browser_type: detectInAppBrowser(navigator.userAgent),
+            });
+            if (navigator.sendBeacon) {
+              navigator.sendBeacon('/api/log/beacon', new Blob([beaconBody], { type: 'application/json' }));
+            } else {
+              fetch('/api/log/beacon', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: beaconBody,
+                keepalive: true,
+              }).catch(() => undefined);
+            }
+          } catch { /* beacon failures must not block flow */ }
+        }
+
         setTimeout(() => {
-          if (authStatus === 'authenticated') {
+          // Re-read ref at the moment of decision; authStatus may have resolved during the 600ms hold.
+          const authAtRedirect = authStatusRef.current;
+          if (authAtRedirect === 'authenticated') {
             window.location.href = checkinUrl;
           } else {
-            signIn('google', { callbackUrl: checkinUrl });
+            sessionStorage.setItem('last_checkin_url', checkinUrl);
+            signIn('google', { callbackUrl: checkinUrl }, { prompt: 'select_account' });
           }
         }, 600);
       } catch {
@@ -72,12 +141,61 @@ export default function ScanPage() {
         setState('error');
       }
     })();
-  }, [nonce, state]);
+  }, [nonce, state, authStatus]);
 
   const acceptPrivacy = () => {
     localStorage.setItem('privacy_accepted', '1');
     setState('scanning');
   };
+
+  const handleCopyLink = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        return;
+      }
+    } catch { /* fall through */ }
+    // Fallback: show readonly input for long-press copy (covered in UI below)
+    setCopied(false);
+  };
+
+  // In-app browser guide screen
+  if (state === 'in_app_browser') {
+    const label =
+      inAppType === 'line' ? 'LINE' :
+      inAppType === 'ig' ? 'Instagram' :
+      inAppType === 'fb' ? 'Facebook' :
+      inAppType === 'messenger' ? 'Messenger' : '內建瀏覽器';
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-surface-dim">
+        <div className="card p-6 max-w-sm w-full">
+          <h2 className="text-lg font-bold mb-2">請在外部瀏覽器中開啟</h2>
+          <p className="text-text-secondary text-sm mb-4">
+            {label} 內建瀏覽器不支援 Google 登入。請點選右上角「⋯」或「更多選項」，選擇「在瀏覽器中開啟」，或複製下方連結貼到 Chrome / Safari 開啟。
+          </p>
+          <button onClick={handleCopyLink} className="btn btn-primary w-full mb-2">
+            {copied ? '已複製' : '複製連結'}
+          </button>
+          <input
+            readOnly
+            value={typeof window !== 'undefined' ? window.location.href : ''}
+            onFocus={(e) => e.currentTarget.select()}
+            className="w-full text-xs font-mono p-2 border border-surface-muted rounded bg-surface-muted text-text-secondary mb-3"
+          />
+          <p className="text-text-muted text-xs mb-3">若按鈕無效，請長按上方網址選取複製。</p>
+          <button
+            onClick={() => setState(localStorage.getItem('privacy_accepted') === '1' ? 'scanning' : 'privacy')}
+            className="btn btn-ghost btn-sm w-full text-text-muted"
+          >
+            我知道風險，直接在此繼續
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Privacy screen
   if (state === 'privacy') {
@@ -100,7 +218,8 @@ export default function ScanPage() {
               簽到時間
             </div>
           </div>
-          <p className="text-text-muted text-xs mb-5">僅供課程出席管理，學期結束後可申請刪除。</p>
+          <p className="text-text-muted text-xs mb-3">僅供課程出席管理，學期結束後可申請刪除。</p>
+          <p className="text-danger-600 text-xs font-medium mb-5">請使用學校帳號 @ntut.org.tw 登入</p>
           <button onClick={acceptPrivacy} className="btn btn-primary w-full">
             我了解，開始簽到
           </button>
