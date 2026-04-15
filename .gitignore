@@ -50,3 +50,7 @@ next-env.d.ts
 
 
 !.dev.vars.example
+
+# local data-import scripts (may contain PII)
+/scripts/import-excel-remote.mjs
+/scripts/import-excel-local.mjs
