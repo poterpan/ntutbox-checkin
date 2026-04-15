@@ -13,27 +13,37 @@ type PendingData = {
   user_agent: string | null;
 };
 
+function logTerminal(req: NextRequest, outcome: string, pending_id: string | null) {
+  console.log('[beacon]', JSON.stringify({
+    phase: 'checkin_terminal',
+    outcome,
+    pending_id,
+    ua: req.headers.get('user-agent'),
+  }));
+}
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   const domain = process.env.ALLOWED_EMAIL_DOMAIN ?? 'ntut.org.tw';
+  const pending_id = new URL(req.url).searchParams.get('pid');
 
   if (!session?.user?.email?.endsWith(`@${domain}`)) {
+    logTerminal(req, 'invalid_domain', pending_id);
     return NextResponse.redirect(new URL('/error?code=invalid_domain', req.url));
   }
 
-  const pending_id = new URL(req.url).searchParams.get('pid');
   if (!pending_id) {
-    // No pid — likely came from a normal login, not a scan flow. Send to dashboard.
+    logTerminal(req, 'no_pid_dashboard_redirect', null);
     return NextResponse.redirect(new URL('/dashboard', req.url));
   }
 
   const kv = getKV();
   const pending = await kv.get<PendingData>(`pending:${pending_id}`, 'json');
   if (!pending) {
+    logTerminal(req, 'pending_expired', pending_id);
     return NextResponse.redirect(new URL('/error?code=pending_expired', req.url));
   }
 
-  // Delete pending immediately (single-use token)
   await kv.delete(`pending:${pending_id}`);
 
   const db = getDB();
@@ -43,11 +53,12 @@ export async function GET(req: NextRequest) {
     .first<{ early_open_at: number; class_start_at: number; late_cutoff_at: number; status: string }>();
 
   if (!sessionRow) {
+    logTerminal(req, 'invalid_session', pending_id);
     return NextResponse.redirect(new URL('/error?code=invalid_session', req.url));
   }
 
-  // Check session is still open
   if (sessionRow.status !== 'open') {
+    logTerminal(req, 'session_closed', pending_id);
     return NextResponse.redirect(new URL('/error?code=session_closed', req.url));
   }
 
@@ -61,6 +72,7 @@ export async function GET(req: NextRequest) {
   const t = pending.scan_time;
 
   if (status === 'too_early') {
+    logTerminal(req, 'too_early', pending_id);
     return NextResponse.redirect(new URL(`/result?status=too_early&t=${t}`, req.url));
   }
 
@@ -92,10 +104,12 @@ export async function GET(req: NextRequest) {
   } catch (err: unknown) {
     const msg = String((err as Error)?.message ?? err);
     if (msg.includes('UNIQUE')) {
+      logTerminal(req, 'already_signed', pending_id);
       return NextResponse.redirect(new URL(`/result?status=already_signed&t=${t}`, req.url));
     }
     throw err;
   }
 
+  logTerminal(req, status, pending_id);
   return NextResponse.redirect(new URL(`/result?status=${status}&t=${t}`, req.url));
 }
