@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import { getFingerprint } from '@/lib/fingerprint';
@@ -16,6 +16,11 @@ export default function ScanPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [scanTimeStr, setScanTimeStr] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Refs that survive re-renders without retriggering effects
+  const scanStartedRef = useRef(false);
+  const authStatusRef = useRef(authStatus);
+  useEffect(() => { authStatusRef.current = authStatus; }, [authStatus]);
 
   // Initial detection: in-app browser takes priority over privacy_accepted shortcut
   useEffect(() => {
@@ -50,6 +55,12 @@ export default function ScanPage() {
 
   useEffect(() => {
     if (state !== 'scanning') return;
+    // Wait until session resolves; otherwise stale 'loading' would mis-route to OAuth.
+    if (authStatus === 'loading') return;
+    // Prevent the auth dep from retriggering the POST if useSession transitions after we start.
+    if (scanStartedRef.current) return;
+    scanStartedRef.current = true;
+
     (async () => {
       try {
         const fp = await getFingerprint();
@@ -88,15 +99,18 @@ export default function ScanPage() {
 
         const checkinUrl = `/api/checkin?pid=${pending_id}&t=${scan_time}`;
 
+        // Read latest auth state after awaits (closure's `authStatus` is stale).
+        const authAfterScan = authStatusRef.current;
+
         // Send pre-OAuth beacon before redirecting to signIn (only when OAuth will happen)
-        if (authStatus !== 'authenticated') {
+        if (authAfterScan !== 'authenticated') {
           try {
             const beaconBody = JSON.stringify({
               phase: 'pre_oauth_signin',
               ua: navigator.userAgent.slice(0, 200),
               nonce_prefix: nonce.slice(0, 8),
               pending_id,
-              auth_status: authStatus,
+              auth_status: authAfterScan,
               in_app_browser_type: detectInAppBrowser(navigator.userAgent),
             });
             if (navigator.sendBeacon) {
@@ -113,7 +127,9 @@ export default function ScanPage() {
         }
 
         setTimeout(() => {
-          if (authStatus === 'authenticated') {
+          // Re-read ref at the moment of decision; authStatus may have resolved during the 600ms hold.
+          const authAtRedirect = authStatusRef.current;
+          if (authAtRedirect === 'authenticated') {
             window.location.href = checkinUrl;
           } else {
             sessionStorage.setItem('last_checkin_url', checkinUrl);
