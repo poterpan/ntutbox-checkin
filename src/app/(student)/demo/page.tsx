@@ -153,9 +153,18 @@ export default function DemoPage() {
         <p className="text-text-secondary text-sm mb-1">
           這是一個測試頁面，用於練習簽到流程。
         </p>
-        <p className="text-text-secondary text-sm mb-5">
+        <p className="text-text-secondary text-sm mb-4">
           點擊下方按鈕後，請使用學校 Google 帳號登入。
         </p>
+
+        <div className="bg-surface-muted rounded-lg px-4 py-3 mb-5 text-left text-xs">
+          <p className="font-medium text-text-primary mb-2">學校 Google 帳號資訊</p>
+          <ul className="space-y-1.5 text-text-secondary">
+            <li><span className="font-medium">帳號：</span>與校內信箱相同，將 @ntut.edu.tw 改為 <span className="font-medium text-brand-500">@ntut.org.tw</span></li>
+            <li><span className="font-medium">預設密碼：</span>身分證字號前 8 碼（英文字母<span className="font-medium">小寫</span>）加上 <span className="font-mono font-medium">tW</span>，共 10 碼，例如 <span className="font-mono">a1234567tW</span></li>
+            <li><span className="font-medium">忘記密碼：</span>可透過 Google 備援手機/信箱重設，或聯繫計網中心（分機 3239）</li>
+          </ul>
+        </div>
         <button
           onClick={handleStart}
           disabled={state === 'redirecting' || authStatus === 'loading'}
