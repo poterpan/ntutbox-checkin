@@ -13,6 +13,7 @@ type DemoRecord = {
 export default function DemoRecordsPage() {
   const [records, setRecords] = useState<DemoRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetch('/api/demo/records')
@@ -70,7 +71,17 @@ export default function DemoRecordsPage() {
         </div>
       )}
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-sm text-text-muted">
+          <span>Demo 連結：</span>
+          <code className="bg-surface-muted px-2 py-0.5 rounded text-xs font-mono text-text-primary select-all">{typeof window !== 'undefined' ? `${window.location.origin}/demo` : '/demo'}</code>
+          <button
+            onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/demo`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+            className="btn btn-ghost btn-sm !min-h-0 !py-0.5 !px-2 text-xs"
+          >
+            {copied ? '已複製' : '複製'}
+          </button>
+        </div>
         <p className="text-sm text-text-muted">
           QR Code 圖片：<a href="/api/demo/qr" target="_blank" className="text-brand-500 hover:text-brand-600 underline underline-offset-2">下載 Demo QR Code</a>
         </p>
