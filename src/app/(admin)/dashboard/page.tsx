@@ -71,6 +71,17 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
+
+      {/* Demo test records link */}
+      <div className="mt-6">
+        <a href="/demo/records"
+          className="card p-4 flex items-center justify-between hover:shadow-md transition-shadow group inline-block w-full sm:w-auto">
+          <div>
+            <h2 className="font-semibold text-text-primary group-hover:text-brand-500 transition-colors">測試簽到紀錄</h2>
+            <p className="text-sm text-text-muted mt-1">查看哪些學生已完成簽到流程測試</p>
+          </div>
+        </a>
+      </div>
     </div>
   );
 }
