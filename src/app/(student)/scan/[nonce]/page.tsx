@@ -219,7 +219,7 @@ export default function ScanPage() {
             </div>
           </div>
           <p className="text-text-muted text-xs mb-3">僅供課程出席管理，學期結束後可申請刪除。</p>
-          <p className="text-danger-600 text-xs font-medium mb-4">請使用學校帳號 @ntut.org.tw 登入</p>
+          <p className="text-danger-600 text-sm font-semibold text-center mb-4">請使用學校帳號 @ntut.org.tw 登入</p>
           <div className="bg-surface-muted rounded-lg px-4 py-3 mb-5 text-left text-xs">
             <p className="font-medium text-text-primary mb-2">學校 Google 帳號資訊</p>
             <ul className="space-y-1.5 text-text-secondary">

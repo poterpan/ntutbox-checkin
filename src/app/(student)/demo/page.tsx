@@ -128,7 +128,7 @@ export default function DemoPage() {
             </div>
           </div>
           <p className="text-text-muted text-xs mb-3">僅供課程出席管理，學期結束後可申請刪除。</p>
-          <p className="text-danger-600 text-xs font-medium mb-5">請使用學校帳號 @ntut.org.tw 登入</p>
+          <p className="text-danger-600 text-sm font-semibold text-center mb-5">請使用學校帳號 @ntut.org.tw 登入</p>
           <button onClick={acceptPrivacy} className="btn btn-primary w-full">
             我了解，繼續
           </button>
