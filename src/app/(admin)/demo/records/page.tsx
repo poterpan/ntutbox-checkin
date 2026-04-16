@@ -14,8 +14,10 @@ export default function DemoRecordsPage() {
   const [records, setRecords] = useState<DemoRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [demoUrl, setDemoUrl] = useState('/demo');
 
   useEffect(() => {
+    setDemoUrl(`${window.location.origin}/demo`);
     fetch('/api/demo/records')
       .then((r) => r.json() as Promise<{ records: DemoRecord[] }>)
       .then((data) => {
@@ -74,9 +76,9 @@ export default function DemoRecordsPage() {
       <div className="mt-6 flex flex-col gap-2">
         <div className="flex items-center gap-2 text-sm text-text-muted">
           <span>Demo 連結：</span>
-          <code className="bg-surface-muted px-2 py-0.5 rounded text-xs font-mono text-text-primary select-all">{typeof window !== 'undefined' ? `${window.location.origin}/demo` : '/demo'}</code>
+          <code className="bg-surface-muted px-2 py-0.5 rounded text-xs font-mono text-text-primary select-all">{demoUrl}</code>
           <button
-            onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/demo`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+            onClick={() => { navigator.clipboard.writeText(demoUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
             className="btn btn-ghost btn-sm !min-h-0 !py-0.5 !px-2 text-xs"
           >
             {copied ? '已複製' : '複製'}
