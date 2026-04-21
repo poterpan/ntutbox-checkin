@@ -15,6 +15,11 @@ const ERROR_CONFIG: Record<string, { message: string; action: string; needsRelog
     action: '重新登入並選擇學校帳號',
     needsRelogin: true,
   },
+  Configuration: {
+    message: '登入過程被中斷（可能按了返回鍵或等待過久），請重新開始登入流程',
+    action: '重新登入',
+    needsRelogin: true,
+  },
   missing_pid: {
     message: '簽到連結無效',
     action: '請重新掃描投影幕上的 QR Code',
@@ -47,7 +52,7 @@ function ErrorContent() {
     const stored = typeof window !== 'undefined'
       ? sessionStorage.getItem('last_checkin_url')
       : null;
-    const callbackUrl = stored ?? '/dashboard';
+    const callbackUrl = stored ?? '/';
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('last_checkin_url');
     }

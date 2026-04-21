@@ -56,6 +56,7 @@ export default function DemoPage() {
     if (authStatus === 'authenticated') {
       window.location.href = checkinUrl;
     } else {
+      sessionStorage.setItem('last_checkin_url', checkinUrl);
       signIn('google', { callbackUrl: checkinUrl }, { prompt: 'select_account' });
     }
   };

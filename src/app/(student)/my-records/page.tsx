@@ -67,7 +67,10 @@ export default function MyRecordsPage() {
           <h1 className="text-lg font-bold text-text-primary mb-2">NTUT 課堂簽到</h1>
           <p className="text-text-muted text-sm mb-6">請登入以查看簽到紀錄</p>
           <button
-            onClick={() => signIn('google', undefined, { prompt: 'select_account' })}
+            onClick={() => {
+              sessionStorage.setItem('last_checkin_url', '/my-records');
+              signIn('google', { callbackUrl: '/my-records' }, { prompt: 'select_account' });
+            }}
             className="btn btn-primary"
           >
             使用學校 Google 帳號登入
