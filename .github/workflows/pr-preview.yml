@@ -1,0 +1,64 @@
+name: PR Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+
+      - name: Build & upload preview version to Cloudflare Workers
+        id: upload
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -o pipefail
+          npx opennextjs-cloudflare build
+          OUTPUT=$(npx opennextjs-cloudflare upload 2>&1 | tee /dev/stderr)
+          PREVIEW_URL=$(echo "$OUTPUT" | grep -oE 'https://[a-z0-9-]+-ntut-checkin\.[a-z0-9-]+\.workers\.dev' | head -n1)
+          if [ -z "$PREVIEW_URL" ]; then
+            echo "::error::Could not extract preview URL from upload output"
+            exit 1
+          fi
+          echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Comment preview URL on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        env:
+          PREVIEW_URL: ${{ steps.upload.outputs.preview_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          header: cf-preview
+          message: |
+            ## Cloudflare Workers Preview
+
+            **Preview URL:** ${{ env.PREVIEW_URL }}
+
+            **Google OAuth Console — both fields need this preview URL:**
+
+            Authorized JavaScript origins:
+            ```
+            ${{ env.PREVIEW_URL }}
+            ```
+
+            Authorized redirect URIs:
+            ```
+            ${{ env.PREVIEW_URL }}/api/auth/callback/google
+            ```
+
+            > Preview shares production D1 / KV bindings — be mindful of writes during testing.
+            > Updated on each push to this PR (commit ${{ env.HEAD_SHA }}).
