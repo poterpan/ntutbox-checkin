@@ -48,7 +48,14 @@ jobs:
 
             **Preview URL:** ${{ env.PREVIEW_URL }}
 
-            **Google OAuth redirect URI to whitelist:**
+            **Google OAuth Console — both fields need this preview URL:**
+
+            Authorized JavaScript origins:
+            ```
+            ${{ env.PREVIEW_URL }}
+            ```
+
+            Authorized redirect URIs:
             ```
             ${{ env.PREVIEW_URL }}/api/auth/callback/google
             ```
