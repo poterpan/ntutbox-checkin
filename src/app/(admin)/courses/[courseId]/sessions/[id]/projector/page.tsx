@@ -60,10 +60,27 @@ export default function ProjectorPage() {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onFsChange);
 
+    // Keep the screen awake while showing the QR (browser releases the lock
+    // when the tab is hidden, so re-acquire on visibility change).
+    let wakeLock: WakeLockSentinel | null = null;
+    const acquireWakeLock = async () => {
+      if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+      } catch {
+        // Permission denied or unsupported — fail silently.
+      }
+    };
+    const onVisibilityChange = () => { void acquireWakeLock(); };
+    void acquireWakeLock();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     return () => {
       clearInterval(qrTimer);
       clearInterval(countdownTimer);
       document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      void wakeLock?.release().catch(() => {});
     };
   }, [fetchQR]);
 
