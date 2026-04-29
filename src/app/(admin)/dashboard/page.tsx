@@ -1,10 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import ConfirmDialog from '@/components/confirm-dialog';
 
 type Course = {
   id: string; name: string; semester: string;
   default_class_start: string; default_weekday: number | null;
+};
+
+type OpenSession = {
+  session_id: string;
+  course_id: string;
+  course_name: string;
+  class_date: string;
+  qr_mode: string;
+  created_at: number;
 };
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -13,16 +23,33 @@ export default function DashboardPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [isSuper, setIsSuper] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [openSessions, setOpenSessions] = useState<OpenSession[]>([]);
+  const [closingId, setClosingId] = useState<string | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<OpenSession | null>(null);
 
   useEffect(() => {
-    fetch('/api/courses')
-      .then((r) => r.json() as Promise<{ courses?: Course[]; is_super?: boolean }>)
-      .then((data) => {
-        setCourses(data.courses ?? []);
-        setIsSuper(data.is_super ?? false);
-        setLoading(false);
-      });
+    Promise.all([
+      fetch('/api/courses').then((r) => r.json() as Promise<{ courses?: Course[]; is_super?: boolean }>),
+      fetch('/api/sessions/open').then((r) => r.json() as Promise<{ sessions?: OpenSession[] }>),
+    ]).then(([coursesData, openData]) => {
+      setCourses(coursesData.courses ?? []);
+      setIsSuper(coursesData.is_super ?? false);
+      setOpenSessions(openData.sessions ?? []);
+      setLoading(false);
+    });
   }, []);
+
+  const handleClose = async (s: OpenSession) => {
+    setConfirmTarget(null);
+    setClosingId(s.session_id);
+    const res = await fetch(`/api/courses/${s.course_id}/sessions/${s.session_id}/close`, { method: 'POST' });
+    if (res.ok) {
+      setOpenSessions((prev) => prev.filter((x) => x.session_id !== s.session_id));
+    }
+    setClosingId(null);
+  };
+
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
 
   if (loading) {
     return (
@@ -34,6 +61,59 @@ export default function DashboardPage() {
 
   return (
     <div>
+      {openSessions.length > 0 && (
+        <section className="mb-8">
+          <h1 className="text-2xl font-bold text-text-primary mb-4">進行中的簽到</h1>
+          <div className="grid gap-3">
+            {openSessions.map((s) => {
+              const overdue = s.class_date < today;
+              return (
+                <div
+                  key={s.session_id}
+                  className={`card p-4 flex items-center justify-between gap-3 ${
+                    overdue ? 'bg-warning-50 border-warning-500' : ''
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="font-semibold text-text-primary truncate">{s.course_name}</h2>
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                        s.qr_mode === 'static'
+                          ? 'text-info-500 bg-info-50'
+                          : 'text-brand-500 bg-brand-50'
+                      }`}>
+                        {s.qr_mode === 'static' ? '靜態' : '動態'}
+                      </span>
+                      {overdue && (
+                        <span className="text-[10px] font-medium text-warning-600 bg-warning-100 px-1.5 py-0.5 rounded">
+                          過期未關
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-text-muted mt-1">{s.class_date}</div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <a
+                      href={`/courses/${s.course_id}/sessions/${s.session_id}`}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      進入
+                    </a>
+                    <button
+                      onClick={() => setConfirmTarget(s)}
+                      disabled={closingId === s.session_id}
+                      className="btn btn-danger btn-sm"
+                    >
+                      {closingId === s.session_id ? '結束中...' : '結束'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-text-primary">我的課程</h1>
         {isSuper && (
@@ -82,6 +162,19 @@ export default function DashboardPage() {
           </div>
         </a>
       </div>
+
+      <ConfirmDialog
+        open={confirmTarget !== null}
+        title="結束簽到"
+        message={
+          confirmTarget
+            ? `確定要結束「${confirmTarget.course_name}」(${confirmTarget.class_date})的簽到？結束後學生將無法再簽到。`
+            : ''
+        }
+        danger
+        onConfirm={() => confirmTarget && handleClose(confirmTarget)}
+        onCancel={() => setConfirmTarget(null)}
+      />
     </div>
   );
 }
