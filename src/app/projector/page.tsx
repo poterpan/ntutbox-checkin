@@ -17,12 +17,10 @@ export default function ProjectorLauncher() {
   useEffect(() => {
     (async () => {
       const res = await fetch('/api/sessions/open');
-      if (res.status === 401) {
-        window.location.href = '/api/auth/signin?callbackUrl=/projector';
-        return;
-      }
       if (!res.ok) {
-        setStatus('載入失敗');
+        // Could be 401 (not signed in) or any other error — push through login
+        // and let the auth flow bring the user back here.
+        window.location.href = '/api/auth/signin?callbackUrl=/projector';
         return;
       }
 
