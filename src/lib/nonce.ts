@@ -51,7 +51,7 @@ export async function validateNonce(nonce: string): Promise<NonceData | null> {
   if (nonce.startsWith('static-')) {
     const db = getDB();
     const row = await db
-      .prepare('SELECT course_id, session_id, status FROM sessions WHERE static_nonce = ? AND status = ?')
+      .prepare('SELECT course_id, id AS session_id, status FROM sessions WHERE static_nonce = ? AND status = ?')
       .bind(nonce, 'open')
       .first<{ course_id: string; session_id: string }>();
     if (row) {
