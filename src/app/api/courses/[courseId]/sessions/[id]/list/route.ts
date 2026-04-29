@@ -32,16 +32,20 @@ export async function GET(
   );
   const notSigned = allEnrolled.results.filter((e) => !signedEmails.has(e.email));
 
+  const attendanceWithEnrolled = attendance.results.map((a) => {
+    const row = a as unknown as { user_email: string };
+    return { ...a, enrolled: enrolledEmails.has(row.user_email) };
+  });
+
   const sessionInfo = await db
     .prepare('SELECT status, qr_mode FROM sessions WHERE id = ? AND course_id = ?')
     .bind(id, courseId)
     .first<{ status: string; qr_mode: string }>();
 
   return NextResponse.json({
-    attendance: attendance.results,
+    attendance: attendanceWithEnrolled,
     not_signed: notSigned,
     has_roster: allEnrolled.results.length > 0,
-    enrolled_emails: [...enrolledEmails],
     session: sessionInfo,
   });
 }

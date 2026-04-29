@@ -9,6 +9,7 @@ type AttendanceRecord = {
   scan_time: number; status: string; is_manual: number;
   fingerprint_hash: string | null; fingerprint_raw: string | null;
   ip: string | null; user_agent: string | null; reaction_ms: number | null;
+  enrolled: boolean;
 };
 type NotSigned = { email: string; student_id: string | null; name: string | null };
 type SessionInfo = { status: string; qr_mode: string } | null;
@@ -30,7 +31,6 @@ export default function SessionViewPage() {
   const [editingStatus, setEditingStatus] = useState<Record<number, boolean>>({});
   const [quickActionLoading, setQuickActionLoading] = useState<Record<string, boolean>>({});
   const [hasRoster, setHasRoster] = useState(false);
-  const [enrolledEmails, setEnrolledEmails] = useState<Set<string>>(new Set());
   const [courseName, setCourseName] = useState<string>('');
   const [classDate, setClassDate] = useState<string>('');
   const [dialog, setDialog] = useState<{ title: string; message: string; danger?: boolean; onConfirm: () => void } | null>(null);
@@ -42,13 +42,11 @@ export default function SessionViewPage() {
         attendance: AttendanceRecord[];
         not_signed: NotSigned[];
         has_roster: boolean;
-        enrolled_emails: string[];
         session: SessionInfo;
       };
       setAttendance(data.attendance);
       setNotSigned(data.not_signed);
       setHasRoster(data.has_roster);
-      setEnrolledEmails(new Set(data.enrolled_emails));
       if (data.session) {
         setSessionStatus(data.session.status ?? 'active');
         setQrMode((data.session.qr_mode as 'dynamic' | 'static') ?? 'dynamic');
@@ -58,7 +56,7 @@ export default function SessionViewPage() {
 
   useEffect(() => {
     fetchList();
-    const timer = setInterval(fetchList, 5000);
+    const timer = setInterval(fetchList, 10000);
 
     // Fetch course name for breadcrumb
     fetch('/api/courses')
@@ -393,7 +391,7 @@ export default function SessionViewPage() {
                   <td className="px-4 py-3 text-text-primary">{r.user_name ?? '-'}</td>
                   <td className="px-4 py-3 text-text-muted">
                     {r.user_email}
-                    {hasRoster && !enrolledEmails.has(r.user_email) && (
+                    {hasRoster && !r.enrolled && (
                       <span className="ml-1.5 text-[10px] font-medium text-warning-600 bg-warning-50 px-1.5 py-0.5 rounded">非名冊</span>
                     )}
                   </td>
