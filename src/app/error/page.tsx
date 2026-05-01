@@ -4,7 +4,15 @@ import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { Suspense } from 'react';
 
-const ERROR_CONFIG: Record<string, { message: string; action: string; needsRelogin?: boolean }> = {
+type ErrorConfig = {
+  message: string;
+  action: string;
+  needsRelogin?: boolean;
+  details?: string[];
+  secondaryAction?: { href: string; label: string };
+};
+
+const ERROR_CONFIG: Record<string, ErrorConfig> = {
   invalid_domain: {
     message: '你登入的帳號不是學校帳號，請點下方重新登入並選擇 @ntut.org.tw',
     action: '重新登入並選擇學校帳號',
@@ -16,9 +24,13 @@ const ERROR_CONFIG: Record<string, { message: string; action: string; needsRelog
     needsRelogin: true,
   },
   Configuration: {
-    message: '登入過程被中斷（可能按了返回鍵或等待過久），請重新開始登入流程',
-    action: '重新登入',
-    needsRelogin: true,
+    message: '登入流程沒有完成，瀏覽器搞砸了一些事情。',
+    details: [
+      '常見原因包含 Chrome iOS 切換 Google 帳號/Profile、等待太久、返回上一頁，或瀏覽器未保留登入流程 cookie。',
+      '如果剛掃 QR Code 簽到，請回簽到區重新掃描；如果只是要登入系統，請回首頁重新登入。',
+    ],
+    action: '建議使用 Safari，或確認使用 @ntut.org.tw 學校帳號後重新掃碼。',
+    secondaryAction: { href: '/', label: '不是簽到？回首頁' },
   },
   missing_pid: {
     message: '簽到連結無效',
@@ -66,7 +78,16 @@ function ErrorContent() {
           ✕
         </div>
         <h1 className="text-xl font-bold text-danger-600 mb-2">出錯了</h1>
-        <p className="text-text-secondary text-sm mb-6">{config.message}</p>
+        <p className={`text-text-secondary text-sm ${config.details ? 'mb-4' : 'mb-6'}`}>
+          {config.message}
+        </p>
+        {config.details && (
+          <div className="text-left text-xs text-text-secondary mb-5 space-y-2">
+            {config.details.map((detail) => (
+              <p key={detail}>{detail}</p>
+            ))}
+          </div>
+        )}
         {config.needsRelogin ? (
           <button onClick={handleRelogin} className="btn btn-primary w-full">
             {config.action}
@@ -76,6 +97,11 @@ function ErrorContent() {
             <p className="text-xs text-text-muted mb-1">建議操作</p>
             <p className="text-sm text-text-primary font-medium">{config.action}</p>
           </div>
+        )}
+        {config.secondaryAction && (
+          <a href={config.secondaryAction.href} className="btn btn-secondary w-full block mt-3">
+            {config.secondaryAction.label}
+          </a>
         )}
       </div>
     </div>

@@ -1,5 +1,10 @@
 export type InAppBrowserType = 'line' | 'ig' | 'fb' | 'messenger' | null;
 
+export function detectIOSChrome(ua: string | undefined | null): boolean {
+  if (!ua) return false;
+  return /\bCriOS\//i.test(ua);
+}
+
 export function detectInAppBrowser(ua: string | undefined | null): InAppBrowserType {
   if (!ua) return null;
   if (/\bLine\//i.test(ua)) return 'line';
