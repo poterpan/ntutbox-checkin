@@ -69,7 +69,7 @@ export default function MyRecordsPage() {
           <button
             onClick={() => {
               sessionStorage.setItem('last_checkin_url', '/my-records');
-              signIn('google', { callbackUrl: '/my-records' });
+              signIn('google', { callbackUrl: '/my-records' }, { prompt: 'select_account' });
             }}
             className="btn btn-primary"
           >

@@ -57,7 +57,7 @@ export default function DemoPage() {
       window.location.href = checkinUrl;
     } else {
       sessionStorage.setItem('last_checkin_url', checkinUrl);
-      signIn('google', { callbackUrl: checkinUrl });
+      signIn('google', { callbackUrl: checkinUrl }, { prompt: 'select_account' });
     }
   };
 
