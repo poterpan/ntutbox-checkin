@@ -137,11 +137,7 @@ export default function SessionViewPage() {
       });
       if (res.ok) {
         setShowManualModal(false);
-        setManualEmail('');
-        setManualName('');
-        setManualReason('');
-        setManualType('manual');
-        setManualOfficial(false);
+        resetManualForm();
         fetchList();
       } else {
         const data = await res.json() as { error?: string };
@@ -232,6 +228,14 @@ export default function SessionViewPage() {
     setManualType('leave');
     setManualOfficial(false);
     setShowManualModal(true);
+  };
+
+  const resetManualForm = () => {
+    setManualEmail('');
+    setManualName('');
+    setManualReason('');
+    setManualType('manual');
+    setManualOfficial(false);
   };
 
   const isClosed = sessionStatus === 'closed';
@@ -331,7 +335,7 @@ export default function SessionViewPage() {
             投影頁
           </a>
         )}
-        <button onClick={() => { setManualType('manual'); setManualOfficial(false); setShowManualModal(true); }} className="btn btn-primary btn-sm">
+        <button onClick={() => { resetManualForm(); setShowManualModal(true); }} className="btn btn-primary btn-sm">
           手動補簽
         </button>
 
