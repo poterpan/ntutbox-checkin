@@ -56,7 +56,7 @@ function ErrorContent() {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('last_checkin_url');
     }
-    signIn('google', { callbackUrl }, { prompt: 'select_account' });
+    signIn('google', { callbackUrl });
   };
 
   return (

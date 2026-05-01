@@ -13,7 +13,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: {
         params: {
           hd: process.env.ALLOWED_EMAIL_DOMAIN ?? 'ntut.org.tw',
-          prompt: 'select_account',
         },
       },
     }),
