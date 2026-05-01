@@ -16,9 +16,8 @@ const ERROR_CONFIG: Record<string, { message: string; action: string; needsRelog
     needsRelogin: true,
   },
   Configuration: {
-    message: '登入過程被中斷（可能按了返回鍵或等待過久），請重新開始登入流程',
-    action: '重新登入',
-    needsRelogin: true,
+    message: '登入流程被瀏覽器中斷，無法接回剛才的簽到',
+    action: '請回簽到區重新掃描 QR Code',
   },
   missing_pid: {
     message: '簽到連結無效',

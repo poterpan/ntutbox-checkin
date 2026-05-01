@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 import { getFingerprint } from '@/lib/fingerprint';
-import { detectInAppBrowser, type InAppBrowserType } from '@/lib/in-app-browser';
+import { detectIOSChrome, detectInAppBrowser, type InAppBrowserType } from '@/lib/in-app-browser';
 
-type ScanState = 'in_app_browser' | 'privacy' | 'scanning' | 'redirecting' | 'error';
+type ScanState = 'in_app_browser' | 'ios_chrome_warning' | 'privacy' | 'scanning' | 'redirecting' | 'error';
 
 export default function ScanPage() {
   const { nonce } = useParams<{ nonce: string }>();
@@ -22,7 +22,7 @@ export default function ScanPage() {
   const authStatusRef = useRef(authStatus);
   useEffect(() => { authStatusRef.current = authStatus; }, [authStatus]);
 
-  // Initial detection: in-app browser takes priority over privacy_accepted shortcut
+  // Initial detection: browser warnings take priority over privacy_accepted shortcut
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const ua = navigator.userAgent;
@@ -44,6 +44,11 @@ export default function ScanPage() {
     if (type === 'ig' || type === 'fb' || type === 'messenger') {
       setInAppType(type);
       setState('in_app_browser');
+      return;
+    }
+
+    if (detectIOSChrome(ua) && sessionStorage.getItem(`ios_chrome_warning_dismissed:${nonce}`) !== '1') {
+      setState('ios_chrome_warning');
       return;
     }
 
@@ -148,6 +153,23 @@ export default function ScanPage() {
     setState('scanning');
   };
 
+  const continueFromBrowserWarning = () => {
+    sessionStorage.setItem(`ios_chrome_warning_dismissed:${nonce}`, '1');
+    setState(localStorage.getItem('privacy_accepted') === '1' ? 'scanning' : 'privacy');
+  };
+
+  const openInSafari = () => {
+    const currentUrl = window.location.href;
+    try {
+      const url = new URL(currentUrl);
+      if (url.protocol === 'https:') {
+        window.location.href = `x-safari-https://${url.host}${url.pathname}${url.search}${url.hash}`;
+        return;
+      }
+    } catch { /* fall back to copy UI */ }
+    handleCopyLink();
+  };
+
   const handleCopyLink = async () => {
     const url = window.location.href;
     try {
@@ -192,6 +214,40 @@ export default function ScanPage() {
           >
             我知道風險，直接在此繼續
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // iOS Chrome warning screen
+  if (state === 'ios_chrome_warning') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-surface-dim">
+        <div className="card p-6 max-w-sm w-full">
+          <div className="w-12 h-12 rounded-full bg-warning-50 text-warning-500 flex items-center justify-center text-2xl mx-auto mb-4">
+            !
+          </div>
+          <h2 className="text-lg font-bold text-text-primary mb-2">
+            Chrome iOS 與學校 Google 帳號可能不相容
+          </h2>
+          <p className="text-text-secondary text-sm mb-3">
+            若 Chrome 內同時有個人與學校 Google 帳號，切換帳號時可能中斷簽到流程。
+          </p>
+          <p className="text-text-secondary text-sm mb-5">
+            建議使用 Safari 開啟此連結，或確認 Chrome 目前使用的是 @ntut.org.tw 學校帳號。
+          </p>
+          <button onClick={openInSafari} className="btn btn-primary w-full mb-2">
+            嘗試用 Safari 開啟
+          </button>
+          <button onClick={handleCopyLink} className="btn btn-secondary w-full mb-2">
+            {copied ? '已複製' : '複製連結'}
+          </button>
+          <button onClick={continueFromBrowserWarning} className="btn btn-ghost btn-sm w-full text-text-muted">
+            我了解風險，直接繼續
+          </button>
+          <p className="text-text-muted text-xs mt-3 text-center">
+            若 Safari 按鈕無效，請複製連結後貼到 Safari 開啟。
+          </p>
         </div>
       </div>
     );

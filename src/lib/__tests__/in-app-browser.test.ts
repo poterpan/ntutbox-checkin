@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectInAppBrowser } from '../in-app-browser';
+import { detectIOSChrome, detectInAppBrowser } from '../in-app-browser';
 
 describe('detectInAppBrowser', () => {
   it('detects LINE iOS', () => {
@@ -52,5 +52,22 @@ describe('detectInAppBrowser', () => {
 
   it('returns null for undefined', () => {
     expect(detectInAppBrowser(undefined)).toBeNull();
+  });
+});
+
+describe('detectIOSChrome', () => {
+  it('detects Chrome on iOS', () => {
+    const ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/148.0.7778.100 Mobile/15E148 Safari/604.1';
+    expect(detectIOSChrome(ua)).toBe(true);
+  });
+
+  it('does not detect Safari on iOS', () => {
+    const ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+    expect(detectIOSChrome(ua)).toBe(false);
+  });
+
+  it('does not detect Chrome desktop', () => {
+    const ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    expect(detectIOSChrome(ua)).toBe(false);
   });
 });
