@@ -156,7 +156,7 @@ export default function MyRecordsPage() {
               今天有上課嗎?這裡還沒有今日簽到紀錄喔~
             </p>
             <p className="text-xs text-text-secondary">
-              若剛掃過 QR Code,建議回簽到區重新掃描一次。
+              若剛掃過 QR Code,請回簽到區重新掃描一次。
             </p>
           </div>
         )}
