@@ -336,7 +336,7 @@ export default function SessionViewPage() {
           </a>
         )}
         <button onClick={() => { resetManualForm(); setShowManualModal(true); }} className="btn btn-primary btn-sm">
-          手動補簽
+          手動修改
         </button>
 
         <a href={`/api/courses/${courseId}/sessions/${id}/export`} className="btn btn-secondary btn-sm">
@@ -455,7 +455,7 @@ export default function SessionViewPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="card p-6 w-full max-w-md mx-4 shadow-lg">
             <h2 className="text-lg font-bold text-text-primary mb-4">
-              {manualType === 'leave' ? '登記請假' : '手動補簽'}
+              {manualType === 'leave' ? '登記請假' : '手動修改'}
             </h2>
             <div className="space-y-3">
               <div>
