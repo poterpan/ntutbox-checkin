@@ -88,6 +88,9 @@ export default function MyRecordsPage() {
     );
   }
 
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
+  const hasTodayRecord = records.some((r) => r.class_date === today);
+
   return (
     <div className="min-h-screen bg-surface-dim p-4">
       <div className="max-w-md mx-auto">
@@ -108,6 +111,17 @@ export default function MyRecordsPage() {
         {error && (
           <div className="bg-danger-50 border border-danger-500 rounded-lg p-3 mb-4 text-sm text-danger-600">
             {error}
+          </div>
+        )}
+
+        {!loading && !error && !hasTodayRecord && (
+          <div className="bg-warning-50 border border-warning-100 border-l-4 border-l-warning-500 rounded-lg px-4 py-3 mb-4">
+            <p className="text-sm font-medium text-warning-600 mb-1">
+              今天有上課嗎？這裡還沒有今日簽到紀錄
+            </p>
+            <p className="text-xs text-text-secondary">
+              如果你剛掃過 QR Code，請回簽到區重新掃描一次。
+            </p>
           </div>
         )}
 
