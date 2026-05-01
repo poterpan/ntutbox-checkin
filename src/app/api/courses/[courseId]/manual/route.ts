@@ -8,13 +8,20 @@ export async function POST(
 ) {
   const { courseId } = await params;
   const admin = await requireCourseAdmin(courseId);
-  const { session_id, user_email, user_name, reason, status: reqStatus } = await req.json() as {
-    session_id?: string; user_email?: string; user_name?: string; reason?: string; status?: string;
+  const {
+    session_id, user_email, user_name, reason, status: reqStatus,
+    is_official_leave,
+  } = await req.json() as {
+    session_id?: string; user_email?: string; user_name?: string; reason?: string;
+    status?: string; is_official_leave?: boolean;
   };
   const allowedStatuses = ['on_time', 'late', 'leave', 'manual'] as const;
   const manualStatus = (allowedStatuses as readonly string[]).includes(reqStatus ?? '')
     ? (reqStatus as typeof allowedStatuses[number])
     : 'manual';
+
+  // Only honor is_official_leave when status is 'leave'; force 0 otherwise.
+  const officialLeaveFlag = manualStatus === 'leave' && is_official_leave === true ? 1 : 0;
 
   if (!session_id || !user_email) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
@@ -27,7 +34,6 @@ export async function POST(
 
   const db = getDB();
 
-  // Verify session belongs to this course and exists
   const session = await db
     .prepare('SELECT id, status FROM sessions WHERE id = ? AND course_id = ?')
     .bind(session_id, courseId)
@@ -43,11 +49,11 @@ export async function POST(
       INSERT INTO attendance
         (session_id, course_id, user_email, user_name,
          scan_time, login_time, status,
-         is_manual, manual_reason, manual_by, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+         is_manual, manual_reason, manual_by, is_official_leave, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
     `).bind(
       session_id, courseId, user_email, user_name ?? null,
-      now, now, manualStatus, reason ?? null, admin.email, now,
+      now, now, manualStatus, reason ?? null, admin.email, officialLeaveFlag, now,
     ).run();
   } catch (err: unknown) {
     const msg = String((err as Error)?.message ?? err);
