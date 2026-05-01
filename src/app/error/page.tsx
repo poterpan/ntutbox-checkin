@@ -24,12 +24,12 @@ const ERROR_CONFIG: Record<string, ErrorConfig> = {
     needsRelogin: true,
   },
   Configuration: {
-    message: '登入流程沒有完成，瀏覽器沒有保留剛才的登入資料。',
+    message: '登入流程沒有完成，瀏覽器搞砸了一些事情。',
     details: [
       '常見原因包含 Chrome iOS 切換 Google 帳號/Profile、等待太久、返回上一頁，或瀏覽器未保留登入流程 cookie。',
       '如果剛掃 QR Code 簽到，請回簽到區重新掃描；如果只是要登入系統，請回首頁重新登入。',
     ],
-    action: '建議使用 Safari，或先確認 Chrome 目前使用 @ntut.org.tw 學校帳號。',
+    action: '建議使用 Safari，或確認使用 @ntut.org.tw 學校帳號後重新掃碼。',
     secondaryAction: { href: '/', label: '不是簽到？回首頁' },
   },
   missing_pid: {
