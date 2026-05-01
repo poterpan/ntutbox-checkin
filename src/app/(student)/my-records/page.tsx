@@ -114,6 +114,17 @@ export default function MyRecordsPage() {
           </div>
         )}
 
+        {!loading && !error && !hasTodayRecord && (
+          <div className="bg-warning-50 border border-warning-100 border-l-4 border-l-warning-500 rounded-lg px-4 py-3 mb-4">
+            <p className="text-sm font-medium text-warning-600 mb-1">
+              今天有上課嗎？這裡還沒有今日簽到紀錄
+            </p>
+            <p className="text-xs text-text-secondary">
+              如果你剛掃過 QR Code，請回簽到區重新掃描一次。
+            </p>
+          </div>
+        )}
+
         {records.length === 0 && !error ? (
           <div className="bg-surface rounded-lg border border-border p-6 text-center">
             <p className="text-text-muted text-sm">尚無簽到紀錄</p>
@@ -147,17 +158,6 @@ export default function MyRecordsPage() {
                 </div>
               );
             })}
-          </div>
-        )}
-
-        {!loading && !error && !hasTodayRecord && (
-          <div className="bg-surface rounded-lg border border-border p-4 mt-4">
-            <p className="text-sm font-medium text-text-primary mb-1.5">
-              今天有上課嗎?這裡還沒有今日簽到紀錄喔~
-            </p>
-            <p className="text-xs text-text-secondary">
-              若剛掃過 QR Code，請回簽到區重新掃描一次。
-            </p>
           </div>
         )}
 
