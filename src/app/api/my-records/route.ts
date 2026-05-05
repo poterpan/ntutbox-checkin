@@ -11,7 +11,7 @@ export async function GET() {
   const db = getDB();
   const rows = await db
     .prepare(
-      `SELECT a.status, a.scan_time, a.is_manual,
+      `SELECT a.status, a.scan_time, a.is_manual, a.is_official_leave,
               s.class_date, c.name AS course_name
        FROM attendance a
        JOIN sessions s ON s.id = a.session_id
