@@ -7,6 +7,7 @@ interface AttendanceRecord {
   status: string;
   scan_time: number;
   is_manual: number;
+  is_official_leave: number;
   class_date: string;
   course_name: string;
 }
@@ -150,11 +151,16 @@ export default function MyRecordsPage() {
                       {r.is_manual ? ' (手動)' : ''}
                     </p>
                   </div>
-                  <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full shrink-0 ml-3 ${label.class}`}
-                  >
-                    {label.text}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${label.class}`}>
+                      {label.text}
+                    </span>
+                    {r.status === 'leave' && r.is_official_leave === 1 && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-success-50 text-success-600">
+                        公假
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
