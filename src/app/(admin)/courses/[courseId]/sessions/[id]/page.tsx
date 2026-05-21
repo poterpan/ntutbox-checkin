@@ -1,18 +1,22 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ConfirmDialog from '@/components/confirm-dialog';
-import AttendanceGroup, { type AttendanceRecord } from './_components/AttendanceGroup';
+import AttendanceGroup, { type AttendanceRecord, type AttendanceDetail } from './_components/AttendanceGroup';
 import AbsentGroup, { type NotSigned } from './_components/AbsentGroup';
 
 type SessionInfo = { status: string; qr_mode: string } | null;
 
+// Server-side attendance row from /list (without client-computed enrolled flag, without heavy detail fields)
+type ServerAttendanceRow = Omit<AttendanceRecord, 'enrolled'>;
+
 export default function SessionViewPage() {
   const { courseId, id } = useParams<{ courseId: string; id: string }>();
   const router = useRouter();
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [notSigned, setNotSigned] = useState<NotSigned[]>([]);
+  const [rawAttendance, setRawAttendance] = useState<ServerAttendanceRow[]>([]);
+  const [roster, setRoster] = useState<NotSigned[]>([]);
+  const [details, setDetails] = useState<Record<number, AttendanceDetail>>({});
   const [sessionStatus, setSessionStatus] = useState<string>('active');
   const [qrMode, setQrMode] = useState<'dynamic' | 'static'>('dynamic');
   const [showManualModal, setShowManualModal] = useState(false);
@@ -25,23 +29,30 @@ export default function SessionViewPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingStatus, setEditingStatus] = useState<Record<number, boolean>>({});
   const [quickActionLoading, setQuickActionLoading] = useState<Record<string, boolean>>({});
-  const [hasRoster, setHasRoster] = useState(false);
   const [courseName, setCourseName] = useState<string>('');
   const [classDate, setClassDate] = useState<string>('');
   const [dialog, setDialog] = useState<{ title: string; message: string; danger?: boolean; onConfirm: () => void } | null>(null);
+
+  const rosterEmails = useMemo(() => new Set(roster.map((s) => s.email)), [roster]);
+  const signedEmails = useMemo(() => new Set(rawAttendance.map((a) => a.user_email)), [rawAttendance]);
+  const attendance: AttendanceRecord[] = useMemo(
+    () => rawAttendance.map((a) => ({ ...a, enrolled: rosterEmails.has(a.user_email) })),
+    [rawAttendance, rosterEmails],
+  );
+  const notSigned = useMemo(
+    () => roster.filter((s) => !signedEmails.has(s.email)),
+    [roster, signedEmails],
+  );
+  const hasRoster = roster.length > 0;
 
   const fetchList = useCallback(async () => {
     const res = await fetch(`/api/courses/${courseId}/sessions/${id}/list`);
     if (res.ok) {
       const data = await res.json() as {
-        attendance: AttendanceRecord[];
-        not_signed: NotSigned[];
-        has_roster: boolean;
+        attendance: ServerAttendanceRow[];
         session: SessionInfo;
       };
-      setAttendance(data.attendance);
-      setNotSigned(data.not_signed);
-      setHasRoster(data.has_roster);
+      setRawAttendance(data.attendance);
       if (data.session) {
         setSessionStatus(data.session.status ?? 'active');
         setQrMode((data.session.qr_mode as 'dynamic' | 'static') ?? 'dynamic');
@@ -49,9 +60,22 @@ export default function SessionViewPage() {
     }
   }, [courseId, id]);
 
+  const loadDetail = useCallback(async (recordId: number) => {
+    const res = await fetch(`/api/courses/${courseId}/attendance/${recordId}`);
+    if (res.ok) {
+      const detail = await res.json() as AttendanceDetail;
+      setDetails((prev) => ({ ...prev, [recordId]: detail }));
+    }
+  }, [courseId]);
+
   useEffect(() => {
     fetchList();
     const timer = setInterval(fetchList, 10000);
+
+    // Roster is fetched once and cached client-side — enrolled_students rarely changes mid-session.
+    fetch(`/api/courses/${courseId}/students`)
+      .then((r) => r.json() as Promise<{ students?: NotSigned[] }>)
+      .then((data) => setRoster(data.students ?? []));
 
     fetch('/api/courses')
       .then((r) => r.json() as Promise<{ courses?: { id: string; name: string }[] }>)
@@ -263,6 +287,8 @@ export default function SessionViewPage() {
     expandedId,
     setExpandedId,
     editingStatus,
+    details,
+    onLoadDetail: loadDetail,
     onStatusChange: handleStatusChange,
     onDelete: handleDeleteRecord,
   };

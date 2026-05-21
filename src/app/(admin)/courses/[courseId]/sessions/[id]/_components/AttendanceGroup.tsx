@@ -10,12 +10,15 @@ export type AttendanceRecord = {
   status: string;
   is_manual: number;
   is_official_leave: number;
+  enrolled: boolean;
+};
+
+export type AttendanceDetail = {
   fingerprint_hash: string | null;
   fingerprint_raw: string | null;
   ip: string | null;
   user_agent: string | null;
   reaction_ms: number | null;
-  enrolled: boolean;
 };
 
 type Props = {
@@ -24,6 +27,8 @@ type Props = {
   expandedId: number | null;
   setExpandedId: (id: number | null) => void;
   editingStatus: Record<number, boolean>;
+  details: Record<number, AttendanceDetail>;
+  onLoadDetail: (id: number) => void;
   onStatusChange: (recordId: number, newStatus: string) => void;
   onDelete: (recordId: number, email: string) => void;
 };
@@ -52,9 +57,18 @@ const statusBadge = (s: string) => {
 
 export default function AttendanceGroup({
   rows, hasRoster, expandedId, setExpandedId,
-  editingStatus, onStatusChange, onDelete,
+  editingStatus, details, onLoadDetail, onStatusChange, onDelete,
 }: Props) {
   if (rows.length === 0) return null;
+
+  const toggleExpand = (id: number) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(id);
+      if (!details[id]) onLoadDetail(id);
+    }
+  };
 
   return (
     <table className="w-full text-sm">
@@ -68,7 +82,9 @@ export default function AttendanceGroup({
         </tr>
       </thead>
       <tbody>
-        {rows.map((r) => (
+        {rows.map((r) => {
+          const detail = details[r.id];
+          return (
           <Fragment key={r.id}>
             <tr className="border-b border-border last:border-0">
               <td className="px-4 py-3 text-text-primary">{r.user_name ?? '-'}</td>
@@ -103,7 +119,7 @@ export default function AttendanceGroup({
                     <option value="manual">補簽</option>
                   </select>
                   <button
-                    onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+                    onClick={() => toggleExpand(r.id)}
                     className="btn btn-ghost btn-sm !min-h-0 !p-1"
                     title="查看裝置資訊"
                   >
@@ -126,44 +142,49 @@ export default function AttendanceGroup({
             {expandedId === r.id && (
               <tr className="bg-surface-muted">
                 <td colSpan={5} className="px-6 py-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <span className="font-medium text-text-secondary">Fingerprint Hash:</span>{' '}
-                      <span className="text-text-muted font-mono">{r.fingerprint_hash ?? '-'}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-text-secondary">IP:</span>{' '}
-                      <span className="text-text-muted font-mono">{r.ip ?? '-'}</span>
-                    </div>
-                    <div className="md:col-span-2">
-                      <span className="font-medium text-text-secondary">User Agent:</span>{' '}
-                      <span className="text-text-muted break-all">{r.user_agent ?? '-'}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium text-text-secondary">Reaction Time:</span>{' '}
-                      <span className="text-text-muted">{r.reaction_ms != null ? `${r.reaction_ms} ms` : '-'}</span>
-                    </div>
-                    {r.fingerprint_raw && (
-                      <div className="md:col-span-2">
-                        <details>
-                          <summary className="font-medium text-text-secondary cursor-pointer hover:text-text-primary">
-                            Raw Fingerprint Components (JSON)
-                          </summary>
-                          <pre className="mt-2 p-3 bg-surface-dim rounded text-xs overflow-x-auto max-h-60 whitespace-pre-wrap break-all">
-                            {(() => {
-                              try { return JSON.stringify(JSON.parse(r.fingerprint_raw as string), null, 2); }
-                              catch { return r.fingerprint_raw; }
-                            })()}
-                          </pre>
-                        </details>
+                  {detail ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="font-medium text-text-secondary">Fingerprint Hash:</span>{' '}
+                        <span className="text-text-muted font-mono">{detail.fingerprint_hash ?? '-'}</span>
                       </div>
-                    )}
-                  </div>
+                      <div>
+                        <span className="font-medium text-text-secondary">IP:</span>{' '}
+                        <span className="text-text-muted font-mono">{detail.ip ?? '-'}</span>
+                      </div>
+                      <div className="md:col-span-2">
+                        <span className="font-medium text-text-secondary">User Agent:</span>{' '}
+                        <span className="text-text-muted break-all">{detail.user_agent ?? '-'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-text-secondary">Reaction Time:</span>{' '}
+                        <span className="text-text-muted">{detail.reaction_ms != null ? `${detail.reaction_ms} ms` : '-'}</span>
+                      </div>
+                      {detail.fingerprint_raw && (
+                        <div className="md:col-span-2">
+                          <details>
+                            <summary className="font-medium text-text-secondary cursor-pointer hover:text-text-primary">
+                              Raw Fingerprint Components (JSON)
+                            </summary>
+                            <pre className="mt-2 p-3 bg-surface-dim rounded text-xs overflow-x-auto max-h-60 whitespace-pre-wrap break-all">
+                              {(() => {
+                                try { return JSON.stringify(JSON.parse(detail.fingerprint_raw as string), null, 2); }
+                                catch { return detail.fingerprint_raw; }
+                              })()}
+                            </pre>
+                          </details>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-text-muted text-xs">載入中...</div>
+                  )}
                 </td>
               </tr>
             )}
           </Fragment>
-        ))}
+          );
+        })}
       </tbody>
     </table>
   );
