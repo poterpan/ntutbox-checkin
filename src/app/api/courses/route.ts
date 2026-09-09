@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getSessionUser } from '@/lib/permissions';
+import { getSessionUserOrNull } from '@/lib/permissions';
 import { getDB } from '@/lib/cloudflare';
 
 export async function GET() {
-  const { email } = await getSessionUser();
+  const user = await getSessionUserOrNull();
+  if (!user) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  const { email } = user;
   const db = getDB();
 
   const superAdmin = await db

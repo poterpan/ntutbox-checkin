@@ -23,6 +23,7 @@ type ProjectorState =
   | { kind: 'confirm-single'; course: Course }
   | { kind: 'choose-multiple'; courses: Course[] }
   | { kind: 'idle' }
+  | { kind: 'unauthenticated' }
   | { kind: 'error'; message: string };
 
 export default function ProjectorLauncher() {
@@ -37,7 +38,7 @@ export default function ProjectorLauncher() {
       ]);
 
       if (sessionsRes.status === 401 || coursesRes.status === 401) {
-        window.location.href = '/api/auth/signin?callbackUrl=/projector';
+        setState({ kind: 'unauthenticated' });
         return;
       }
       if (!sessionsRes.ok || !coursesRes.ok) {
@@ -112,7 +113,23 @@ export default function ProjectorLauncher() {
       )}
 
       {state.kind === 'error' && (
-        <p className="text-danger-600">{state.message}</p>
+        <div className="mt-4 flex flex-col items-center gap-4">
+          <p className="text-danger-600">{state.message}</p>
+          <button onClick={() => window.location.reload()} className="btn btn-secondary btn-sm">
+            重試
+          </button>
+        </div>
+      )}
+
+      {state.kind === 'unauthenticated' && (
+        <div className="mt-4 flex flex-col items-center gap-4 text-center">
+          <p className="text-text-muted max-w-sm">
+            這台裝置還沒有登入，登入後才能顯示或開啟簽到。
+          </p>
+          <a href="/api/auth/signin?callbackUrl=/projector" className="btn btn-primary">
+            使用 ntut.org.tw 帳號登入
+          </a>
+        </div>
       )}
 
       {state.kind === 'idle' && (
