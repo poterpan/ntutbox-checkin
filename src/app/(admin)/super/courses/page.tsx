@@ -2,15 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import ConfirmDialog from '@/components/confirm-dialog';
+import { REGULAR_PRESET, ALL_DAY_PRESET, type CourseTimingDefaults } from '@/lib/course-presets';
+
+type CourseForm = CourseTimingDefaults & {
+  id: string;
+  name: string;
+  semester: string;
+  // '' means "no fixed weekday" -> stored as NULL, so /projector never
+  // auto-prompts this course. Ad-hoc event courses want this.
+  default_weekday: number | '';
+};
+
+const blankForm = (): CourseForm => ({
+  id: '', name: '', semester: '', default_weekday: 3, ...REGULAR_PRESET,
+});
 
 type Course = { id: string; name: string; semester: string; status: string };
 
 export default function SuperCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [form, setForm] = useState({
-    id: '', name: '', semester: '', default_class_start: '13:10',
-    default_early_open_min: 30, default_late_cutoff_min: 10, default_weekday: 3,
-  });
+  const [form, setForm] = useState<CourseForm>(blankForm);
   const [message, setMessage] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [dialog, setDialog] = useState<{ title: string; message: string; danger?: boolean; onConfirm: () => void } | null>(null);
@@ -28,11 +39,14 @@ export default function SuperCoursesPage() {
     const res = await fetch('/api/super/courses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        default_weekday: form.default_weekday === '' ? null : form.default_weekday,
+      }),
     });
     if (res.ok) {
       setMessage(`課程 ${form.id} 建立成功`);
-      setForm({ id: '', name: '', semester: '', default_class_start: '13:10', default_early_open_min: 30, default_late_cutoff_min: 10, default_weekday: 3 });
+      setForm(blankForm());
       fetchCourses();
     } else {
       const err = await res.json() as { error?: string };
@@ -115,6 +129,13 @@ export default function SuperCoursesPage() {
           <input value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })}
             placeholder="2026-spring" required />
         </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-text-secondary">簽到時間預設：</span>
+          <button type="button" onClick={() => setForm({ ...form, ...REGULAR_PRESET })}
+            className="btn btn-ghost btn-sm">一般課程</button>
+          <button type="button" onClick={() => setForm({ ...form, ...ALL_DAY_PRESET, default_weekday: '' })}
+            className="btn btn-ghost btn-sm">全天簽到</button>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-1">預設上課時間</label>
@@ -122,11 +143,28 @@ export default function SuperCoursesPage() {
               placeholder="13:10" required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-1">星期幾 (0=日)</label>
-            <input type="number" value={form.default_weekday} onChange={(e) => setForm({ ...form, default_weekday: Number(e.target.value) })}
-              min={0} max={6} />
+            <label className="block text-sm font-medium text-text-secondary mb-1">星期幾 (0=日，留空=不固定)</label>
+            <input type="number" value={form.default_weekday}
+              onChange={(e) => setForm({ ...form, default_weekday: e.target.value === '' ? '' : Number(e.target.value) })}
+              min={0} max={6} placeholder="不固定" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1">提前開放 (分鐘)</label>
+            <input type="number" value={form.default_early_open_min}
+              onChange={(e) => setForm({ ...form, default_early_open_min: Number(e.target.value) })}
+              min={0} max={1440} required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1">遲到容許 (分鐘)</label>
+            <input type="number" value={form.default_late_cutoff_min}
+              onChange={(e) => setForm({ ...form, default_late_cutoff_min: Number(e.target.value) })}
+              min={0} max={1440} required />
           </div>
         </div>
+        <p className="text-xs text-text-muted">
+          掃碼可用區間 = 上課時間 −{form.default_early_open_min || 0} 分 ～ +{form.default_late_cutoff_min || 0} 分；
+          上課時間之前掃算準時、之後算遲到、超過容許算缺席。
+        </p>
         <button type="submit" className="btn btn-primary">建立課程</button>
         {message && <p className="mt-3 text-sm text-text-secondary">{message}</p>}
       </form>

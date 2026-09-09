@@ -6,11 +6,29 @@ export async function POST(req: NextRequest) {
   await requireSuperAdmin();
   const { id, name, semester, default_class_start, default_early_open_min, default_late_cutoff_min, default_weekday } = await req.json() as {
     id?: string; name?: string; semester?: string; default_class_start?: string;
-    default_early_open_min?: number; default_late_cutoff_min?: number; default_weekday?: number;
+    default_early_open_min?: number; default_late_cutoff_min?: number; default_weekday?: number | null;
   };
 
   if (!id || !name || !semester || !default_class_start) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
+  }
+
+  // These feed computeSessionTimes at session-create time. A malformed value
+  // yields NaN boundaries and a course whose sessions nobody can check into,
+  // so reject it here rather than writing an unusable course.
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(default_class_start)) {
+    return NextResponse.json({ error: 'invalid_class_start' }, { status: 400 });
+  }
+
+  const inRange = (v: number | undefined, max: number) =>
+    v === undefined || (Number.isInteger(v) && v >= 0 && v <= max);
+
+  if (!inRange(default_early_open_min, 1440) || !inRange(default_late_cutoff_min, 1440)) {
+    return NextResponse.json({ error: 'invalid_minutes' }, { status: 400 });
+  }
+
+  if (default_weekday != null && !(Number.isInteger(default_weekday) && default_weekday >= 0 && default_weekday <= 6)) {
+    return NextResponse.json({ error: 'invalid_weekday' }, { status: 400 });
   }
 
   const db = getDB();
