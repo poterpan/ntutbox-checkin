@@ -90,6 +90,29 @@ describe('POST /api/super/courses', () => {
     expect(await res.json()).toEqual({ error: 'invalid_weekday' });
   });
 
+  it('reports a duplicate course code as 409 instead of throwing', async () => {
+    const stmt = makeStmt();
+    stmt.run.mockRejectedValueOnce(
+      new Error('D1_ERROR: UNIQUE constraint failed: courses.id'),
+    );
+    dbMock.prepare.mockReturnValue(stmt);
+
+    const res = await POST(makeRequest({ ...base, default_class_start: '13:10' }));
+
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'course_already_exists' });
+  });
+
+  it('rethrows a non-constraint DB failure', async () => {
+    const stmt = makeStmt();
+    stmt.run.mockRejectedValueOnce(new Error('D1_ERROR: network unreachable'));
+    dbMock.prepare.mockReturnValue(stmt);
+
+    await expect(
+      POST(makeRequest({ ...base, default_class_start: '13:10' })),
+    ).rejects.toThrow('network unreachable');
+  });
+
   it('still requires id / name / semester / class start', async () => {
     dbMock.prepare.mockReturnValue(makeStmt());
     const res = await POST(makeRequest({ name: 'x' }));

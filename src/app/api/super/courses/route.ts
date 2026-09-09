@@ -32,16 +32,26 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDB();
-  await db.prepare(`
-    INSERT INTO courses (id, name, semester, default_class_start,
-                         default_early_open_min, default_late_cutoff_min,
-                         default_weekday, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(
-    id, name, semester, default_class_start,
-    default_early_open_min ?? 30, default_late_cutoff_min ?? 10,
-    default_weekday ?? null, Date.now(),
-  ).run();
+  try {
+    await db.prepare(`
+      INSERT INTO courses (id, name, semester, default_class_start,
+                           default_early_open_min, default_late_cutoff_min,
+                           default_weekday, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      id, name, semester, default_class_start,
+      default_early_open_min ?? 30, default_late_cutoff_min ?? 10,
+      default_weekday ?? null, Date.now(),
+    ).run();
+  } catch (err: unknown) {
+    // courses.id is the primary key. Retyping an existing code is an easy
+    // mistake to make, and an unhandled throw here surfaced as "失敗: undefined".
+    const msg = String((err as Error)?.message ?? err);
+    if (msg.includes('UNIQUE') || msg.includes('PRIMARY KEY')) {
+      return NextResponse.json({ error: 'course_already_exists' }, { status: 409 });
+    }
+    throw err;
+  }
 
   return NextResponse.json({ ok: true, course_id: id });
 }

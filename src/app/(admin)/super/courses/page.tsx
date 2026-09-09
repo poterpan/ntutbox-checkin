@@ -17,6 +17,14 @@ const blankForm = (): CourseForm => ({
   id: '', name: '', semester: '', default_weekday: 3, ...REGULAR_PRESET,
 });
 
+const ERROR_MESSAGES: Record<string, string> = {
+  missing_fields: '必填欄位沒填完',
+  invalid_class_start: '上課時間格式要是 HH:MM（24 小時制）',
+  invalid_minutes: '提前開放／遲到容許要是 0–1440 的整數',
+  invalid_weekday: '星期幾要是 0–6，或留空',
+  course_already_exists: '這個課程代碼已經存在',
+};
+
 type Course = { id: string; name: string; semester: string; status: string };
 
 export default function SuperCoursesPage() {
@@ -49,8 +57,8 @@ export default function SuperCoursesPage() {
       setForm(blankForm());
       fetchCourses();
     } else {
-      const err = await res.json() as { error?: string };
-      setMessage(`失敗: ${err.error}`);
+      const err = await res.json().catch(() => ({})) as { error?: string };
+      setMessage(`失敗: ${ERROR_MESSAGES[err.error ?? ''] ?? err.error ?? `HTTP ${res.status}`}`);
     }
   };
 
