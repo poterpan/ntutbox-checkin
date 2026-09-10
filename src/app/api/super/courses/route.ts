@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSuperAdmin } from '@/lib/permissions';
+import { checkSuperAdmin } from '@/lib/permissions';
 import { getDB } from '@/lib/cloudflare';
 
 export async function POST(req: NextRequest) {
-  await requireSuperAdmin();
+  const access = await checkSuperAdmin();
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
   const { id, name, semester, default_class_start, default_early_open_min, default_late_cutoff_min, default_weekday } = await req.json() as {
     id?: string; name?: string; semester?: string; default_class_start?: string;
     default_early_open_min?: number; default_late_cutoff_min?: number; default_weekday?: number | null;
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  await requireSuperAdmin();
+  const access = await checkSuperAdmin();
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
   const { id } = await req.json() as { id: string };
   if (!id) {
     return NextResponse.json({ error: 'missing_id' }, { status: 400 });

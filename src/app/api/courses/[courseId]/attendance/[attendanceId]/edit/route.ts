@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCourseAdmin } from '@/lib/permissions';
+import { checkCourseAdmin } from '@/lib/permissions';
 import { getDB } from '@/lib/cloudflare';
 
 export async function PATCH(
@@ -7,7 +7,9 @@ export async function PATCH(
   { params }: { params: Promise<{ courseId: string; attendanceId: string }> },
 ) {
   const { courseId, attendanceId } = await params;
-  const admin = await requireCourseAdmin(courseId);
+  const access = await checkCourseAdmin(courseId);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  const admin = access.admin;
   const { status } = await req.json() as { status: string };
 
   const validStatuses = ['on_time', 'late', 'absent', 'leave', 'manual'];

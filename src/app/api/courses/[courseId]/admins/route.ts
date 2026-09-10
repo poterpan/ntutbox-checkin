@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCourseAdmin } from '@/lib/permissions';
+import { checkCourseAdmin } from '@/lib/permissions';
 import { getDB } from '@/lib/cloudflare';
 
 const ROLE_LEVEL: Record<string, number> = { ta: 1, instructor: 2, owner: 3, super: 4 };
@@ -10,7 +10,8 @@ export async function GET(
   { params }: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await params;
-  await requireCourseAdmin(courseId);
+  const access = await checkCourseAdmin(courseId);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
   const db = getDB();
 
   const admins = await db
@@ -27,7 +28,9 @@ export async function POST(
   { params }: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await params;
-  const admin = await requireCourseAdmin(courseId);
+  const access = await checkCourseAdmin(courseId);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  const admin = access.admin;
   // Only instructor/owner/super can add admins
   if (admin.role === 'ta') {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
@@ -71,7 +74,9 @@ export async function DELETE(
   { params }: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await params;
-  const admin = await requireCourseAdmin(courseId);
+  const access = await checkCourseAdmin(courseId);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  const admin = access.admin;
   if (admin.role === 'ta') {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
