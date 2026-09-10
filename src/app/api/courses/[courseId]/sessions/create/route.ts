@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCourseAdmin } from '@/lib/permissions';
+import { checkCourseAdmin } from '@/lib/permissions';
 import { getDB } from '@/lib/cloudflare';
 import { computeSessionTimes } from '@/lib/time';
 
@@ -8,7 +8,9 @@ export async function POST(
   { params }: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await params;
-  const admin = await requireCourseAdmin(courseId);
+  const access = await checkCourseAdmin(courseId);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  const admin = access.admin;
   const db = getDB();
 
   const course = await db
@@ -65,7 +67,8 @@ export async function GET(
   { params }: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await params;
-  await requireCourseAdmin(courseId);
+  const access = await checkCourseAdmin(courseId);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
   const db = getDB();
   const sessions = await db
     .prepare('SELECT * FROM sessions WHERE course_id = ? ORDER BY class_date DESC')

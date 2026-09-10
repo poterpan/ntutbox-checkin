@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireCourseAdmin } from '@/lib/permissions';
+import { checkCourseAdmin } from '@/lib/permissions';
 import { getDB } from '@/lib/cloudflare';
 
 function csvEscape(val: unknown): string {
@@ -15,7 +15,8 @@ export async function GET(
   { params }: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await params;
-  await requireCourseAdmin(courseId);
+  const access = await checkCourseAdmin(courseId);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
   const db = getDB();
 
   const course = await db

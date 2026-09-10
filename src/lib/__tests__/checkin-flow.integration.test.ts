@@ -81,7 +81,7 @@ vi.mock('@/lib/cloudflare', () => ({
 }));
 
 vi.mock('@/lib/permissions', () => ({
-  requireCourseAdmin: vi.fn(async () => undefined),
+  checkCourseAdmin: vi.fn(async () => ({ ok: true, admin: { role: 'super', email: 'super@ntut.org.tw' } })),
 }));
 
 vi.mock('@/lib/auth', () => ({

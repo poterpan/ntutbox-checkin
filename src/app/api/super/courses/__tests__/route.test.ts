@@ -10,7 +10,7 @@ vi.mock('@/lib/cloudflare', () => ({
 }));
 
 vi.mock('@/lib/permissions', () => ({
-  requireSuperAdmin: vi.fn(async () => ({ email: 'super@ntut.org.tw' })),
+  checkSuperAdmin: vi.fn(async () => ({ ok: true, admin: { role: 'super', email: 'super@ntut.org.tw' } })),
 }));
 
 import { POST } from '../route';
