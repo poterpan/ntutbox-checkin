@@ -6,6 +6,23 @@ export type AdminInfo = {
   email: string;
 };
 
+export type SessionUser = { email: string; name: string | null };
+
+/**
+ * Return-based session lookup.
+ *
+ * Prefer this in new route handlers. `getSessionUser` below signals failure
+ * with `throw new Response(...)`, which is a Remix idiom — Next's App Router
+ * treats a thrown Response as an unhandled error and serves an empty-bodied
+ * 500, so callers can never see the intended 401/403. Returning null lets the
+ * handler `return` a real status the client can branch on.
+ */
+export async function getSessionUserOrNull(): Promise<SessionUser | null> {
+  const session = await auth();
+  if (!session?.user?.email) return null;
+  return { email: session.user.email, name: session.user.name ?? null };
+}
+
 export async function getSessionUser(): Promise<{ email: string; name: string | null }> {
   const session = await auth();
   if (!session?.user?.email) {

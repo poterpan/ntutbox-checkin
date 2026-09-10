@@ -2,15 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ConfirmDialog from '@/components/confirm-dialog';
-
-type OpenSession = {
-  session_id: string;
-  course_id: string;
-  course_name: string;
-  class_date: string;
-  qr_mode: string;
-  created_at: number;
-};
+import { chooseProjectorTarget, type ProjectorSession } from '@/lib/projector-target';
 
 type Course = {
   id: string;
@@ -22,7 +14,9 @@ type ProjectorState =
   | { kind: 'loading'; status: string }
   | { kind: 'confirm-single'; course: Course }
   | { kind: 'choose-multiple'; courses: Course[] }
+  | { kind: 'choose-session'; sessions: ProjectorSession[] }
   | { kind: 'idle' }
+  | { kind: 'unauthenticated' }
   | { kind: 'error'; message: string };
 
 export default function ProjectorLauncher() {
@@ -37,7 +31,7 @@ export default function ProjectorLauncher() {
       ]);
 
       if (sessionsRes.status === 401 || coursesRes.status === 401) {
-        window.location.href = '/api/auth/signin?callbackUrl=/projector';
+        setState({ kind: 'unauthenticated' });
         return;
       }
       if (!sessionsRes.ok || !coursesRes.ok) {
@@ -45,17 +39,21 @@ export default function ProjectorLauncher() {
         return;
       }
 
-      const { sessions } = await sessionsRes.json() as { sessions?: OpenSession[] };
+      const { sessions } = await sessionsRes.json() as { sessions?: ProjectorSession[] };
       const { courses } = await coursesRes.json() as { courses?: Course[] };
 
       const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
-      const todaysSessions = (sessions ?? []).filter((s) => s.class_date === today);
+      const target = chooseProjectorTarget(sessions ?? [], today);
 
-      // Branch A: today already has an open session — jump straight to its QR page.
-      // Stale sessions from earlier days are intentionally ignored.
-      if (todaysSessions.length > 0) {
-        const target = todaysSessions.reduce((a, b) => (b.created_at > a.created_at ? b : a));
-        window.location.href = `/courses/${target.course_id}/sessions/${target.session_id}/projector`;
+      // Branch A: today already has an open session. One goes straight to its
+      // QR page; several ask, so the first-opened one is not shadowed.
+      if (target.kind === 'single') {
+        const { course_id, session_id } = target.session;
+        window.location.href = `/courses/${course_id}/sessions/${session_id}/projector`;
+        return;
+      }
+      if (target.kind === 'choose') {
+        setState({ kind: 'choose-session', sessions: target.sessions });
         return;
       }
 
@@ -112,11 +110,48 @@ export default function ProjectorLauncher() {
       )}
 
       {state.kind === 'error' && (
-        <p className="text-danger-600">{state.message}</p>
+        <div className="mt-4 flex flex-col items-center gap-4">
+          <p className="text-danger-600">{state.message}</p>
+          <button onClick={() => window.location.reload()} className="btn btn-secondary btn-sm">
+            重試
+          </button>
+        </div>
+      )}
+
+      {state.kind === 'unauthenticated' && (
+        <div className="mt-4 flex flex-col items-center gap-4 text-center">
+          <p className="text-text-muted max-w-sm">
+            這台裝置還沒有登入，登入後才能顯示或開啟簽到。
+          </p>
+          <a href="/api/auth/signin?callbackUrl=/projector" className="btn btn-primary">
+            使用 ntut.org.tw 帳號登入
+          </a>
+        </div>
       )}
 
       {state.kind === 'idle' && (
         <p className="text-text-muted">今日無簽到</p>
+      )}
+
+      {state.kind === 'choose-session' && (
+        <div className="w-full max-w-md mt-4">
+          <p className="text-text-muted text-center mb-4">
+            今日有多筆進行中的簽到，請選擇要投影的課程
+          </p>
+          <div className="grid gap-3">
+            {state.sessions.map((s) => (
+              <div key={s.session_id} className="card p-4 flex items-center justify-between gap-3">
+                <h2 className="font-semibold text-text-primary truncate">{s.course_name}</h2>
+                <a
+                  href={`/courses/${s.course_id}/sessions/${s.session_id}/projector`}
+                  className="btn btn-primary btn-sm shrink-0"
+                >
+                  投影
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {state.kind === 'choose-multiple' && (
