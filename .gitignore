@@ -54,3 +54,8 @@ next-env.d.ts
 # local data-import scripts (may contain PII)
 /scripts/import-excel-remote.mjs
 /scripts/import-excel-local.mjs
+
+# Claude Code: worktrees live inside the repo, so they must never be staged —
+# a bare `git add -A` would otherwise commit a whole second copy of src/.
+/.claude/worktrees/
+/.claude/settings.local.json

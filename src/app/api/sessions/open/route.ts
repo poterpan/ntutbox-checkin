@@ -6,6 +6,7 @@ type OpenSession = {
   session_id: string;
   course_id: string;
   course_name: string;
+  semester: string;
   class_date: string;
   qr_mode: string;
   created_at: number;
@@ -29,7 +30,7 @@ export async function GET() {
     sessions = await db
       .prepare(`
         SELECT s.id AS session_id, s.course_id, c.name AS course_name,
-               s.class_date, s.qr_mode, s.created_at
+               c.semester, s.class_date, s.qr_mode, s.created_at
         FROM sessions s
         INNER JOIN courses c ON c.id = s.course_id
         WHERE s.status = 'open' AND c.status = 'active'
@@ -40,7 +41,7 @@ export async function GET() {
     sessions = await db
       .prepare(`
         SELECT s.id AS session_id, s.course_id, c.name AS course_name,
-               s.class_date, s.qr_mode, s.created_at
+               c.semester, s.class_date, s.qr_mode, s.created_at
         FROM sessions s
         INNER JOIN courses c ON c.id = s.course_id
         INNER JOIN course_admins ca ON ca.course_id = c.id

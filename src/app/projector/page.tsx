@@ -7,6 +7,7 @@ import { chooseProjectorTarget, type ProjectorSession } from '@/lib/projector-ta
 type Course = {
   id: string;
   name: string;
+  semester: string;
   default_weekday: number | null;
 };
 
@@ -141,7 +142,10 @@ export default function ProjectorLauncher() {
           <div className="grid gap-3">
             {state.sessions.map((s) => (
               <div key={s.session_id} className="card p-4 flex items-center justify-between gap-3">
-                <h2 className="font-semibold text-text-primary truncate">{s.course_name}</h2>
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-text-primary truncate">{s.course_name}</h2>
+                  <span className="badge badge-info mt-1">{s.semester}</span>
+                </div>
                 <a
                   href={`/courses/${s.course_id}/sessions/${s.session_id}/projector`}
                   className="btn btn-primary btn-sm shrink-0"
@@ -160,7 +164,12 @@ export default function ProjectorLauncher() {
           <div className="grid gap-3">
             {state.courses.map((c) => (
               <div key={c.id} className="card p-4 flex items-center justify-between gap-3">
-                <h2 className="font-semibold text-text-primary truncate">{c.name}</h2>
+                {/* Same course runs term after term under an identical name, so
+                    the semester is the only thing telling these rows apart. */}
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-text-primary truncate">{c.name}</h2>
+                  <span className="badge badge-info mt-1">{c.semester}</span>
+                </div>
                 <button
                   onClick={() => openSession(c.id)}
                   disabled={opening !== null}
@@ -177,7 +186,9 @@ export default function ProjectorLauncher() {
       <ConfirmDialog
         open={state.kind === 'confirm-single'}
         title="開啟今日簽到"
-        message={state.kind === 'confirm-single' ? `要開啟「${state.course.name}」的今日簽到嗎？` : ''}
+        message={state.kind === 'confirm-single'
+          ? `要開啟「${state.course.name}」（${state.course.semester}）的今日簽到嗎？`
+          : ''}
         confirmLabel={opening ? '開啟中...' : '開啟'}
         cancelLabel="不開"
         onConfirm={() => {
