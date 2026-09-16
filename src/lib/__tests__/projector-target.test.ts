@@ -10,6 +10,7 @@ const s = (
   session_id,
   course_id: `course-${session_id}`,
   course_name,
+  semester: '115-1',
   class_date,
   qr_mode: 'dynamic',
   created_at,

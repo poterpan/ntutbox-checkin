@@ -134,8 +134,11 @@ export default function SuperCoursesPage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-text-secondary mb-1">學期</label>
+          {/* Free-text column — the placeholder is the only thing steering the
+              format, and it used to suggest "2026-spring" while every other
+              course used the 民國 form. */}
           <input value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })}
-            placeholder="2026-spring" required />
+            placeholder="115-1" required />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-text-secondary">簽到時間預設：</span>

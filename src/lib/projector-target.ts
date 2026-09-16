@@ -12,6 +12,8 @@ export type ProjectorSession = {
   session_id: string;
   course_id: string;
   course_name: string;
+  /** Carried only so the picker can tell same-named courses of different terms apart. */
+  semester: string;
   class_date: string;
   qr_mode: string;
   created_at: number;
