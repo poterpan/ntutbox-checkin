@@ -7,7 +7,7 @@ import { execFileSync } from 'child_process';
 const require = createRequire(import.meta.url);
 const XLSX = require('xlsx');
 
-const EXCEL_PATH = '/Users/poterpan/Developer/ai/llm/seminar-auto-grade-reports/114-2_grade.xlsx';
+const EXCEL_PATH = '/Users/poterpan/Developer/school/ntut/ta/seminar-auto-grade-reports/114-2_grade.xlsx';
 const COURSE_ID = 'iai-seminar-2026s';
 const CREATED_BY = 't114c73029@ntut.org.tw';
 
